@@ -1,0 +1,35 @@
+{
+  "name": "ReYohoho",
+  "version": "1.0.0",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "author": "ReYohoho",
+  "devDependencies": {
+    "@electron/packager": "^18.3.6",
+    "electron": "^34.0.1",
+    "electron-builder": "^25.1.8"
+  },
+  "dependencies": {
+    "@ghostery/adblocker-electron": "^2.5.0",
+    "cross-fetch": "^4.1.0"
+  },
+  "build": {
+    "productName": "ReYohoho",
+    "appId": "ru.reyohoho",
+    "directories": {
+      "buildResources": "build"
+    },
+    "win": {
+      "asar": false,
+      "target": "nsis",
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "installerIcon": "build/icon.png",
+      "installerHeaderIcon": "build/icon.png",
+      "deleteAppDataOnUninstall": true
+    }
+  }
+}
