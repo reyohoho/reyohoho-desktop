@@ -58,7 +58,7 @@ async function createWindow() {
     mainWindow.loadURL(url);
   });
   mainWindow.webContents.on("did-fail-load", function () {
-    reload();
+    //reload();
   });
 
   setupButtons();
