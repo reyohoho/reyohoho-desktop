@@ -1,6 +1,6 @@
 {
   "name": "ReYohoho",
-  "version": "1.0.8",
+  "version": "1.0.10",
   "main": "main.js",
   "author": "ReYohoho",
   "devDependencies": {
@@ -14,9 +14,9 @@
   },
   "scripts": {
     "start": "electron .",
-    "build:win": "npm run build && electron-builder --win --publish always",
-    "build:mac": "npm run build && electron-builder --mac",
-    "build:linux": "npm run build && electron-builder --linux"
+    "build:win": "electron-builder --win --publish always",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux"
   },
   "build": {
     "productName": "ReYohoho",
