@@ -1,24 +1,53 @@
 const path = require('node:path')
 const { ElectronBlocker } = require('@ghostery/adblocker-electron');
 const fetch = require('cross-fetch');
-const { app, BrowserWindow } = require('electron')
+const { app, BrowserWindow, dialog } = require('electron')
 const { session } = require('electron')
 const { globalShortcut } = require('electron');
 const shell = require('electron').shell;
 var fs = require('fs');
-const blocker = ElectronBlocker.parse(fs.readFileSync('easylist.txt', 'utf-8'));
 const APP_NAME = "ReYohoho Desktop"
 
 app.commandLine.appendSwitch('disable-site-isolation-trials')
 let mainWindow;
 
 var reload = () => {
-  if(mainWindow.webContents.getURL().includes("loader.html")) {
+  if (mainWindow.webContents.getURL().includes("loader.html")) {
     mainWindow.loadURL('https://reyohoho.github.io/reyohoho');
   } else {
     mainWindow.loadURL(mainWindow.webContents.getURL());
   }
   setupButtons();
+}
+
+AbortSignal.timeout ??= function timeout(ms) {
+  const ctrl = new AbortController()
+  setTimeout(() => ctrl.abort(), ms)
+  return ctrl.signal
+}
+
+function checkUpdates() {
+  fetch('https://reyohoho.space:4437/appversion', { signal: AbortSignal.timeout(5000) })
+    .then(response => response.json())
+    .then(data => {
+      const update_info = data["reyohoho-desktop"];
+      if (update_info["version"] === app.getVersion()) {
+        return;
+      }
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: `Доступно обновление ${update_info["version"]}!`,
+        message: update_info["changelog"],
+        buttons: ['Позже', 'Обновить'],
+      }).then((result) => {
+        if (result.response === 1) {
+          shell.openExternal(update_info["download_link"]);
+        }
+      });
+    })
+    .catch(error => {
+      console.error('Error check updates:', error);
+    });
 }
 
 async function createWindow() {
@@ -38,6 +67,11 @@ async function createWindow() {
   })
   mainWindow.loadFile("loader.html");
   mainWindow.maximize();
+  checkUpdates();
+  mainWindow.setTitle(APP_NAME + ' Loading ....');
+  const blocker = await ElectronBlocker.fromLists(fetch, [
+    'https://reyohoho.space:4437/template/easylist.txt'
+  ]);
 
   mainWindow.webContents.on('did-start-loading', () => {
     mainWindow.setTitle(APP_NAME + ' Loading ....');
@@ -47,7 +81,6 @@ async function createWindow() {
     mainWindow.setTitle(APP_NAME);
 
   });
-
 
   blocker.enableBlockingInSession(mainWindow.webContents.session);
 
@@ -62,9 +95,9 @@ async function createWindow() {
   });
 
   setupButtons();
-  setTimeout(function() {
+  setTimeout(function () {
     mainWindow.loadURL('https://reyohoho.github.io/reyohoho');
-},1000);
+  }, 1000);
   // mainWindow.webContents.loadURL('https://reyohoho.github.io/reyohoho');
 }
 
@@ -262,4 +295,3 @@ app.whenReady().then(() => {
 app.on('window-all-closed', function () {
   if (process.platform !== 'darwin') app.quit()
 })
-
