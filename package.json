@@ -24,11 +24,19 @@
     "win": {
       "asar": false,
       "target": "nsis",
-      "icon": "build/icon.png"
+      "icon": "icons/256x256.png"
+    },
+    "mac": {
+      "asar": false,
+      "target": [
+        "dmg"
+      ]
+    },
+    "linux": {
+      "asar": false,
+      "target": "AppImage"
     },
     "nsis": {
-      "installerIcon": "build/icon.png",
-      "installerHeaderIcon": "build/icon.png",
       "deleteAppDataOnUninstall": true
     }
   }

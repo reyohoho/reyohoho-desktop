@@ -6,7 +6,6 @@ const { session } = require('electron')
 const { globalShortcut } = require('electron');
 const shell = require('electron').shell;
 var fs = require('fs');
-const blocker = ElectronBlocker.parse(fs.readFileSync('easylist.txt', 'utf-8'));
 const APP_NAME = "ReYohoho Desktop"
 
 app.commandLine.appendSwitch('disable-site-isolation-trials')
@@ -38,6 +37,10 @@ async function createWindow() {
   })
   mainWindow.loadFile("loader.html");
   mainWindow.maximize();
+  mainWindow.setTitle(APP_NAME + ' Loading ....');
+  const blocker = await ElectronBlocker.fromLists(fetch, [
+    'https://reyohoho.space:4437/template/easylist.txt'
+  ]);
 
   mainWindow.webContents.on('did-start-loading', () => {
     mainWindow.setTitle(APP_NAME + ' Loading ....');
@@ -47,7 +50,6 @@ async function createWindow() {
     mainWindow.setTitle(APP_NAME);
 
   });
-
 
   blocker.enableBlockingInSession(mainWindow.webContents.session);
 
