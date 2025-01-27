@@ -40,7 +40,9 @@
       "target": "AppImage"
     },
     "nsis": {
-      "deleteAppDataOnUninstall": true
+      "deleteAppDataOnUninstall": true,
+      "allowToChangeInstallationDirectory": true,
+      "oneClick": false
     }
   }
 }

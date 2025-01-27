@@ -103,7 +103,7 @@ async function createWindow() {
 
 function setupButtons() {
   mainWindow.webContents.on('did-finish-load', () => {
-    const addBUttonsScript = `
+    const addButtonsScript = `
 let isButtonClicked = false;
 let csource = null;
 let isInit = false;
@@ -238,7 +238,7 @@ $('#yohoho-iframe').on('load', function () {
 });
      `;
 
-    mainWindow.webContents.executeJavaScript(addBUttonsScript);
+    mainWindow.webContents.executeJavaScript(addButtonsScript);
   });
 }
 
