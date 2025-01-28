@@ -1,29 +1,37 @@
 {
   "name": "ReYohoho",
   "version": "1.0.3",
-  "main": "main.js",
+  "main": "dist/main.js",
   "author": "ReYohoho",
   "devDependencies": {
     "@electron/packager": "^18.3.6",
+    "@types/electron": "^1.6.12",
+    "@types/node": "^22.12.0",
+    "cross-env": "^7.0.3",
     "electron": "^34.0.1",
-    "electron-builder": "^25.1.8"
+    "electron-builder": "^25.1.8",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.7.3"
   },
   "dependencies": {
     "@ghostery/adblocker-electron": "^2.5.0",
     "cross-fetch": "^4.1.0"
   },
   "scripts": {
-    "start": "electron .",
-    "build:win": "electron-builder --win --publish=never",
-    "build:mac": "electron-builder --mac --publish=never",
-    "build:linux": "electron-builder --linux --publish=never"
+    "build": "tsc",
+    "start": "npm run build && electron .",
+    "build:win": "rm -rf ./dist && npm run build && electron-builder --win --publish=never",
+    "build:mac": "rm -rf ./dist && npm run build && electron-builder --mac --publish=never",
+    "build:linux": "rm -rf ./dist && npm run build && electron-builder --linux --publish=never"
   },
   "build": {
     "productName": "ReYohoho",
     "appId": "ru.reyohoho",
-    "directories": {
-      "buildResources": "build"
-    },
+    "files": [
+      "dist/main.js",
+      "package.json",
+      "loader.html"
+    ],
     "win": {
       "asar": false,
       "target": "nsis",
