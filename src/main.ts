@@ -1,6 +1,6 @@
 import { ElectronBlocker } from '@ghostery/adblocker-electron';
 import fetch from 'cross-fetch';
-import { app, BrowserWindow, dialog, session, globalShortcut, shell } from 'electron';
+import { app, BrowserWindow, dialog, session, globalShortcut, shell, screen } from 'electron';
 
 const APP_NAME = `ReYohoho Desktop ${app.getVersion()}`;
 
@@ -62,20 +62,29 @@ function checkUpdates(): void {
 
 async function createWindow(): Promise<void> {
   mainWindow = new BrowserWindow({
-    width: 1200,
-    height: 850,
+    width: screen.getPrimaryDisplay().workAreaSize.width,
+    height: screen.getPrimaryDisplay().workAreaSize.height,
     autoHideMenuBar: true,
     darkTheme: true,
     backgroundColor: "#000",
     icon: 'icon.png',
+    show: false,
     webPreferences: {
       contextIsolation: false,
       webSecurity: false,
+      devTools: false,
     }
   });
-  mainWindow.loadFile("loader.html");
-  mainWindow.maximize();
+  mainWindow.once('ready-to-show', () => {
+    mainWindow?.maximize();
+    mainWindow?.show();
+    mainWindow?.focus();
+  });
+
+  mainWindow?.loadFile("loader.html");
+  
   checkUpdates();
+
   mainWindow.setTitle(APP_NAME + ' Loading ....');
   const blocker = await ElectronBlocker.fromLists(fetch, [
     'https://reyohoho.space:4437/template/easylist.txt'
@@ -121,12 +130,10 @@ function setupButtons(): void {
         buttonContainer.style.top = '10px';
         buttonContainer.style.right = '10px';
         buttonContainer.style.zIndex = 10000;
-        buttonContainer.style.display = 'flex'; // Flexbox для горизонтального расположения
-        buttonContainer.style.gap = '10px'; // Расстояние между кнопками
-        // buttonContainer.style.pointerEvents = 'none'; // Не блокировать клики по элементам под контейнером
+        buttonContainer.style.display = 'flex';
+        buttonContainer.style.gap = '10px';
         document.body.appendChild(buttonContainer);
 
-        // Создаем первую кнопку
         const compressorButton = document.createElement('button');
         compressorButton.textContent = 'Включить компрессор';
         compressorButton.style.padding = '10px 20px';
@@ -137,7 +144,6 @@ function setupButtons(): void {
         compressorButton.style.cursor = 'pointer';
         buttonContainer.appendChild(compressorButton);
 
-        // Создаем вторую кнопку
         const flipButton = document.createElement('button');
         flipButton.textContent = 'Включить отражение';
         flipButton.style.padding = '10px 20px';
@@ -148,7 +154,6 @@ function setupButtons(): void {
         flipButton.style.cursor = 'pointer';
         buttonContainer.appendChild(flipButton);
 
-        // Добавляем обработчики событий для кнопок
         compressorButton.addEventListener('click', () => {
             try {
 
