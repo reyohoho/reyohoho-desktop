@@ -266,8 +266,6 @@ app.on("browser-window-created", (e, win) => {
 });
 
 app.whenReady().then(() => {
-  globalShortcut.register('F5', reload);
-  globalShortcut.register('CommandOrControl+R', reload);
   const filter = {
     urls: ['https://*.video-ik-ok-ii.space/*', 'https://*.lumex.space/*']
   };
@@ -288,6 +286,19 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
+
+app.on('will-quit', () => {
+  globalShortcut.unregisterAll()
+})
+
+app.on('browser-window-focus', () => {
+  globalShortcut.register('F5', reload);
+  globalShortcut.register('CommandOrControl+R', reload);
+})
+
+app.on('browser-window-blur', () => {
+  globalShortcut.unregisterAll()
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
