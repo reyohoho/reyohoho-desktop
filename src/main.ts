@@ -11,9 +11,21 @@ const reload = (): void => {
   if (mainWindow?.webContents.getURL().includes("loader.html")) {
     mainWindow?.loadURL('https://reyohoho.github.io/reyohoho');
   } else {
-    mainWindow?.loadURL(mainWindow?.webContents.getURL());
+    mainWindow?.reload();
   }
   setupButtons();
+};
+
+const switchBlurVideo = (): void => {
+   const switchBlurScript = `
+   if(document.getElementById('yohoho-iframe').contentDocument.querySelector('video').style.filter.includes('blur')) {
+    document.getElementById('yohoho-iframe').contentDocument.querySelector('video').style.filter = '';
+   } else {
+    document.getElementById('yohoho-iframe').contentDocument.querySelector('video').style.filter = 'blur(12px)';
+   }
+   `;
+
+   mainWindow?.webContents.executeJavaScript(switchBlurScript);
 };
 
 if (!AbortSignal.timeout) {
@@ -100,11 +112,13 @@ async function createWindow(): Promise<void> {
 
   blocker.enableBlockingInSession(mainWindow.webContents.session);
 
+  mainWindow.on('closed', function () {
+    mainWindow = null
+  })
+
   setupButtons();
 
-  setTimeout(() => {
-    mainWindow?.loadURL('https://reyohoho.github.io/reyohoho');
-  }, 1000);
+  mainWindow?.loadURL('https://reyohoho.github.io/reyohoho');
 
   mainWindow.on('closed', function () {
     mainWindow = null
@@ -133,6 +147,18 @@ function setupButtons(): void {
         buttonContainer.style.display = 'flex';
         buttonContainer.style.gap = '10px';
         document.body.appendChild(buttonContainer);
+
+        const blurButton = document.createElement('button');
+        blurButton.textContent = 'Блюр (Ctrl+B)';
+        blurButton.style.padding = '10px 20px';
+        blurButton.style.backgroundColor = 'blue';
+        blurButton.style.color = 'white';
+        blurButton.style.border = 'none';
+        blurButton.style.borderRadius = '5px';
+        blurButton.style.cursor = 'pointer';
+        blurButton.disabled = true;
+        blurButton.style.pointerEvents = 'none';
+        buttonContainer.appendChild(blurButton);
 
         const compressorButton = document.createElement('button');
         compressorButton.textContent = 'Включить компрессор';
@@ -245,6 +271,7 @@ function setupButtons(): void {
     `;
 
     mainWindow?.webContents.executeJavaScript(addButtonsScript);
+
   });
 }
 
@@ -294,6 +321,7 @@ app.on('will-quit', () => {
 app.on('browser-window-focus', () => {
   globalShortcut.register('F5', reload);
   globalShortcut.register('CommandOrControl+R', reload);
+  globalShortcut.register('CommandOrControl+B', switchBlurVideo);
 })
 
 app.on('browser-window-blur', () => {
