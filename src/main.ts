@@ -192,7 +192,7 @@ const switchBlurVideo = (): void => {
    if(document.getElementById('yohoho-iframe').contentDocument.querySelector('video').style.filter.includes('blur')) {
     document.getElementById('yohoho-iframe').contentDocument.querySelector('video').style.filter = '';
    } else {
-    document.getElementById('yohoho-iframe').contentDocument.querySelector('video').style.filter = 'blur(12px)';
+    document.getElementById('yohoho-iframe').contentDocument.querySelector('video').style.filter = 'blur(50px)';
    }
    `;
 
