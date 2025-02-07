@@ -1,6 +1,6 @@
 {
   "name": "ReYohoho",
-  "version": "1.0.7",
+  "version": "1.0.7.1",
   "main": "dist/main.js",
   "author": "ReYohoho",
   "type": "module",
@@ -33,6 +33,7 @@
     "appId": "ru.reyohoho",
     "files": [
       "dist/main.js",
+      "dist/torrents.js",
       "package.json",
       "loader.html"
     ],
