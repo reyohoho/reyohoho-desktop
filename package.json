@@ -1,6 +1,6 @@
 {
   "name": "ReYohoho",
-  "version": "1.0.4",
+  "version": "1.0.6",
   "main": "dist/main.js",
   "author": "ReYohoho",
   "devDependencies": {
@@ -48,8 +48,13 @@
       "target": "AppImage"
     },
     "nsis": {
-      "deleteAppDataOnUninstall": true,
+      "deleteAppDataOnUninstall": false,
       "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "allowElevation": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "runAfterFinish": true,
       "oneClick": false
     }
   }
