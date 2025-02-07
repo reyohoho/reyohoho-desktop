@@ -1,6 +1,6 @@
 {
   "name": "ReYohoho",
-  "version": "1.0.8",
+  "version": "1.0.9",
   "main": "dist/main.js",
   "author": "ReYohoho",
   "type": "module",
@@ -19,6 +19,8 @@
   "dependencies": {
     "@ghostery/adblocker-electron": "^2.5.0",
     "@types/electron-prompt": "^1.6.5",
+    "electron-prompt": "^1.7.0",
+    "electron-store": "^10.0.1",
     "cross-fetch": "^4.1.0"
   },
   "scripts": {
