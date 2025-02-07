@@ -1,6 +1,7 @@
 import { ElectronBlocker } from '@ghostery/adblocker-electron';
 import fetch from 'cross-fetch';
 import { app, BrowserWindow, dialog, session, globalShortcut, shell, screen } from 'electron';
+import { createTorrentsWindow } from './torrents.js'
 
 const APP_NAME = `ReYohoho Desktop ${app.getVersion()}`;
 
@@ -29,6 +30,18 @@ $('#yohoho-iframe').on('load', function () {
     buttonContainer.style.display = 'flex';
     buttonContainer.style.gap = '10px';
     document.body.appendChild(buttonContainer);
+
+    const torrentsButton = document.createElement('button');
+    torrentsButton.textContent = 'ReYohoho VIP (F1)';
+    torrentsButton.style.padding = '10px 20px';
+    torrentsButton.style.backgroundColor = 'purple';
+    torrentsButton.style.color = 'white';
+    torrentsButton.style.border = 'none';
+    torrentsButton.style.borderRadius = '5px';
+    torrentsButton.style.cursor = 'pointer';
+    torrentsButton.disabled = true;
+    torrentsButton.style.pointerEvents = 'none';
+    buttonContainer.appendChild(torrentsButton);
 
     const blurButton = document.createElement('button');
     blurButton.textContent = 'Блюр (F2)';
@@ -155,6 +168,23 @@ const reload = (): void => {
   } else {
     mainWindow?.reload();
   }
+};
+
+const openTorrents = (): void => {
+  if (mainWindow != null) {
+      dialog.showMessageBox(mainWindow, {
+          type: 'none',
+          message: `Пока доступно ограниченному кругу лиц, по всем вопросам: @ReYohoho_support 
+Нажми на значок магнита, чтобы открыть стрим торрента в VLC`,
+          buttons: ['OK'],
+      }).then((result) => {
+          mainWindow?.webContents.executeJavaScript('document.querySelector("#kp-title").innerText')
+              .then(result => {
+                  createTorrentsWindow(result.replace(/\s*\(.*\)$/, ""));
+              })
+      });
+  }
+
 };
 
 const switchBlurVideo = (): void => {
@@ -333,6 +363,7 @@ app.on('will-quit', () => {
 
 app.on('browser-window-focus', () => {
   globalShortcut.register('F5', reload);
+  globalShortcut.register('F1', openTorrents);
   globalShortcut.register('F2', switchBlurVideo);
   globalShortcut.register('F3', switchCompressor);
   globalShortcut.register('F4', switchMirror);
