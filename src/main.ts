@@ -7,13 +7,152 @@ const APP_NAME = `ReYohoho Desktop ${app.getVersion()}`;
 app.commandLine.appendSwitch('disable-site-isolation-trials');
 let mainWindow: BrowserWindow | null = null;
 
+const isDebug = false;
+
+const addButtonsScript = `
+let isButtonClicked = false;
+let csource = null;
+let isInit = false;
+let isFlipButtonClicked = false;
+
+$('#yohoho-iframe').on('load', function () {
+    const elementToRemove = document.getElementById('rh-buttonContainer');
+    if (elementToRemove) {
+        elementToRemove.remove();
+    }
+    const buttonContainer = document.createElement('div');
+    buttonContainer.id = 'rh-buttonContainer';
+    buttonContainer.style.position = 'fixed';
+    buttonContainer.style.top = '10px';
+    buttonContainer.style.right = '10px';
+    buttonContainer.style.zIndex = 10000;
+    buttonContainer.style.display = 'flex';
+    buttonContainer.style.gap = '10px';
+    document.body.appendChild(buttonContainer);
+
+    const blurButton = document.createElement('button');
+    blurButton.textContent = 'Блюр (Ctrl+B)';
+    blurButton.style.padding = '10px 20px';
+    blurButton.style.backgroundColor = 'blue';
+    blurButton.style.color = 'white';
+    blurButton.style.border = 'none';
+    blurButton.style.borderRadius = '5px';
+    blurButton.style.cursor = 'pointer';
+    blurButton.disabled = true;
+    blurButton.style.pointerEvents = 'none';
+    buttonContainer.appendChild(blurButton);
+
+    const compressorButton = document.createElement('button');
+    compressorButton.textContent = 'Включить компрессор';
+    compressorButton.style.padding = '10px 20px';
+    compressorButton.style.backgroundColor = 'blue';
+    compressorButton.style.color = 'white';
+    compressorButton.style.border = 'none';
+    compressorButton.style.borderRadius = '5px';
+    compressorButton.style.cursor = 'pointer';
+    buttonContainer.appendChild(compressorButton);
+
+    const flipButton = document.createElement('button');
+    flipButton.textContent = 'Включить отражение';
+    flipButton.style.padding = '10px 20px';
+    flipButton.style.backgroundColor = 'blue';
+    flipButton.style.color = 'white';
+    flipButton.style.border = 'none';
+    flipButton.style.borderRadius = '5px';
+    flipButton.style.cursor = 'pointer';
+    buttonContainer.appendChild(flipButton);
+
+    compressorButton.addEventListener('click', () => {
+        try {
+
+            if (!csource) {
+                const ik = document.getElementById('yohoho-iframe');
+                $('#yohoho-iframe').on('load', function () {
+                    csource = null;
+                    isButtonClicked = false;
+                    compressorButton.style.backgroundColor = 'blue';
+                    compressorButton.textContent = 'Включить компрессор';
+                });
+                const video_iframe = ik.contentDocument.querySelectorAll('video')[0];
+                video_iframe.crossOrigin = 'anonymous';
+                contextC = new AudioContext();
+                compressor = contextC.createDynamicsCompressor();
+                compressor.threshold.value = -50;
+                compressor.knee.value = 40;
+                compressor.ratio.value = 12;
+                compressor.attack.value = 0;
+                compressor.release.value = 0.25;
+                csource = contextC.createMediaElementSource(video_iframe);
+                csource.connect(contextC.destination);
+            }
+        } catch (e) {
+            console.log(e);
+        }
+
+        if (!isButtonClicked) {
+            csource.disconnect(contextC.destination);
+            csource.connect(compressor);
+            compressor.connect(contextC.destination);
+            isButtonClicked = true;
+            compressorButton.style.backgroundColor = 'orange';
+            compressorButton.textContent = 'Выключить компрессор';
+        } else {
+            csource.disconnect(compressor);
+            compressor.disconnect(contextC.destination);
+            csource.connect(contextC.destination);
+            isButtonClicked = false;
+            compressorButton.style.backgroundColor = 'blue';
+            compressorButton.textContent = 'Включить компрессор';
+        }
+    });
+
+    flipButton.addEventListener('click', () => {
+        const ik = document.getElementById('yohoho-iframe');
+        const video_iframe = ik.contentDocument.querySelectorAll('video')[0];
+        try {
+            if (!isInit) {
+                $('#yohoho-iframe').on('load', function () {
+                    isFlipButtonClicked = false;
+                    flipButton.style.backgroundColor = 'blue';
+                    flipButton.textContent = 'Включить отражение';
+                });
+            }
+        } catch (e) {
+            console.log(e);
+        }
+
+        if (!isFlipButtonClicked) {
+            video_iframe.style.transform = 'scaleX(-1)';
+            isFlipButtonClicked = true;
+            flipButton.style.backgroundColor = 'orange';
+            flipButton.textContent = 'Выключить отражение';
+        } else {
+            video_iframe.style.transform = 'scaleX(1)';
+            isFlipButtonClicked = false;
+            flipButton.style.backgroundColor = 'blue';
+            flipButton.textContent = 'Включить отражение';
+        }
+    });
+    if (document.getElementById('yohoho-iframe').getAttribute('src').includes("reyohoho.space")) {
+        compressorButton.disabled = true;
+        compressorButton.style.backgroundColor = 'gray';
+        compressorButton.textContent = 'Компрессор в плеере';
+    }
+    if (document.getElementById('yohoho-iframe').getAttribute('src').includes("allarknow") || document.getElementById('yohoho-iframe').getAttribute('src').includes("videoframe") || document.getElementById('yohoho-iframe').getAttribute('src').includes("kinoserial.net")) {
+        compressorButton.disabled = true;
+        compressorButton.style.backgroundColor = 'gray';
+        compressorButton.textContent = 'Компрессор недоступен';
+    }
+
+});
+`;
+
 const reload = (): void => {
   if (mainWindow?.webContents.getURL().includes("loader.html")) {
     mainWindow?.loadURL('https://reyohoho.github.io/reyohoho');
   } else {
     mainWindow?.reload();
   }
-  setupButtons();
 };
 
 const switchBlurVideo = (): void => {
@@ -84,9 +223,13 @@ async function createWindow(): Promise<void> {
     webPreferences: {
       contextIsolation: false,
       webSecurity: false,
-      devTools: false,
+      devTools: isDebug,
     }
   });
+  if(isDebug) {
+    mainWindow.webContents.openDevTools();
+  }
+
   mainWindow.once('ready-to-show', () => {
     mainWindow?.maximize();
     mainWindow?.show();
@@ -112,167 +255,19 @@ async function createWindow(): Promise<void> {
 
   blocker.enableBlockingInSession(mainWindow.webContents.session);
 
+  mainWindow?.webContents.on('did-finish-load', () => {
+    mainWindow?.webContents.executeJavaScript(addButtonsScript);
+  });
+
   mainWindow.on('closed', function () {
     mainWindow = null
   })
-
-  setupButtons();
 
   mainWindow?.loadURL('https://reyohoho.github.io/reyohoho');
 
   mainWindow.on('closed', function () {
     mainWindow = null
   })
-}
-
-function setupButtons(): void {
-  mainWindow?.webContents.on('did-finish-load', () => {
-    const addButtonsScript = `
-    let isButtonClicked = false;
-    let csource = null;
-    let isInit = false;
-    let isFlipButtonClicked = false;
-
-    $('#yohoho-iframe').on('load', function () {
-        const elementToRemove = document.getElementById('rh-buttonContainer');
-        if (elementToRemove) {
-            elementToRemove.remove();
-        }
-        const buttonContainer = document.createElement('div');
-        buttonContainer.id = 'rh-buttonContainer';
-        buttonContainer.style.position = 'fixed';
-        buttonContainer.style.top = '10px';
-        buttonContainer.style.right = '10px';
-        buttonContainer.style.zIndex = 10000;
-        buttonContainer.style.display = 'flex';
-        buttonContainer.style.gap = '10px';
-        document.body.appendChild(buttonContainer);
-
-        const blurButton = document.createElement('button');
-        blurButton.textContent = 'Блюр (Ctrl+B)';
-        blurButton.style.padding = '10px 20px';
-        blurButton.style.backgroundColor = 'blue';
-        blurButton.style.color = 'white';
-        blurButton.style.border = 'none';
-        blurButton.style.borderRadius = '5px';
-        blurButton.style.cursor = 'pointer';
-        blurButton.disabled = true;
-        blurButton.style.pointerEvents = 'none';
-        buttonContainer.appendChild(blurButton);
-
-        const compressorButton = document.createElement('button');
-        compressorButton.textContent = 'Включить компрессор';
-        compressorButton.style.padding = '10px 20px';
-        compressorButton.style.backgroundColor = 'blue';
-        compressorButton.style.color = 'white';
-        compressorButton.style.border = 'none';
-        compressorButton.style.borderRadius = '5px';
-        compressorButton.style.cursor = 'pointer';
-        buttonContainer.appendChild(compressorButton);
-
-        const flipButton = document.createElement('button');
-        flipButton.textContent = 'Включить отражение';
-        flipButton.style.padding = '10px 20px';
-        flipButton.style.backgroundColor = 'blue';
-        flipButton.style.color = 'white';
-        flipButton.style.border = 'none';
-        flipButton.style.borderRadius = '5px';
-        flipButton.style.cursor = 'pointer';
-        buttonContainer.appendChild(flipButton);
-
-        compressorButton.addEventListener('click', () => {
-            try {
-
-                if (!csource) {
-                    const ik = document.getElementById('yohoho-iframe');
-                    $('#yohoho-iframe').on('load', function () {
-                        csource = null;
-                        isButtonClicked = false;
-                        compressorButton.style.backgroundColor = 'blue';
-                        compressorButton.textContent = 'Включить компрессор';
-                    });
-                    const video_iframe = ik.contentDocument.querySelectorAll('video')[0];
-                    video_iframe.crossOrigin = 'anonymous';
-                    contextC = new AudioContext();
-                    compressor = contextC.createDynamicsCompressor();
-                    compressor.threshold.value = -50;
-                    compressor.knee.value = 40;
-                    compressor.ratio.value = 12;
-                    compressor.attack.value = 0;
-                    compressor.release.value = 0.25;
-                    csource = contextC.createMediaElementSource(video_iframe);
-                    csource.connect(contextC.destination);
-                }
-            } catch (e) {
-                console.log(e);
-            }
-
-            if (!isButtonClicked) {
-                csource.disconnect(contextC.destination);
-                csource.connect(compressor);
-                compressor.connect(contextC.destination);
-                isButtonClicked = true;
-                compressorButton.style.backgroundColor = 'orange';
-                compressorButton.textContent = 'Выключить компрессор';
-            } else {
-                csource.disconnect(compressor);
-                compressor.disconnect(contextC.destination);
-                csource.connect(contextC.destination);
-                isButtonClicked = false;
-                compressorButton.style.backgroundColor = 'blue';
-                compressorButton.textContent = 'Включить компрессор';
-            }
-        });
-
-        flipButton.addEventListener('click', () => {
-            const ik = document.getElementById('yohoho-iframe');
-            const video_iframe = ik.contentDocument.querySelectorAll('video')[0];
-            try {
-                if (!isInit) {
-                    $('#yohoho-iframe').on('load', function () {
-                        isFlipButtonClicked = false;
-                        flipButton.style.backgroundColor = 'blue';
-                        flipButton.textContent = 'Включить отражение';
-                    });
-                }
-            } catch (e) {
-                console.log(e);
-            }
-
-            if (!isFlipButtonClicked) {
-                video_iframe.style.transform = 'scaleX(-1)';
-                isFlipButtonClicked = true;
-                flipButton.style.backgroundColor = 'orange';
-                flipButton.textContent = 'Выключить отражение';
-            } else {
-                video_iframe.style.transform = 'scaleX(1)';
-                isFlipButtonClicked = false;
-                flipButton.style.backgroundColor = 'blue';
-                flipButton.textContent = 'Включить отражение';
-            }
-        });
-        if (document.getElementById('yohoho-iframe').getAttribute('src').includes("allarknow")) {
-            compressorButton.disabled = true;
-            compressorButton.style.backgroundColor = 'gray';
-            compressorButton.textContent = 'Компрессор по умолчанию';
-        }
-        if (document.getElementById('yohoho-iframe').getAttribute('src').includes("reyohoho.space")) {
-            compressorButton.disabled = true;
-            compressorButton.style.backgroundColor = 'gray';
-            compressorButton.textContent = 'Компрессор в плеере';
-        }
-        if (document.getElementById('yohoho-iframe').getAttribute('src').includes("videoframe") || document.getElementById('yohoho-iframe').getAttribute('src').includes("kinoserial.net")) {
-            compressorButton.disabled = true;
-            compressorButton.style.backgroundColor = 'gray';
-            compressorButton.textContent = 'Компрессор недоступен';
-        }
-
-    });
-    `;
-
-    mainWindow?.webContents.executeJavaScript(addButtonsScript);
-
-  });
 }
 
 app.on('web-contents-created', (e, wc) => {
