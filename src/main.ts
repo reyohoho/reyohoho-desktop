@@ -23,7 +23,7 @@ $('#yohoho-iframe').on('load', function () {
     const buttonContainer = document.createElement('div');
     buttonContainer.id = 'rh-buttonContainer';
     buttonContainer.style.position = 'fixed';
-    buttonContainer.style.top = '10px';
+    buttonContainer.style.top = '50px';
     buttonContainer.style.right = '10px';
     buttonContainer.style.zIndex = 10000;
     buttonContainer.style.display = 'flex';
@@ -31,7 +31,7 @@ $('#yohoho-iframe').on('load', function () {
     document.body.appendChild(buttonContainer);
 
     const blurButton = document.createElement('button');
-    blurButton.textContent = 'Блюр (Ctrl+B)';
+    blurButton.textContent = 'Блюр (F2)';
     blurButton.style.padding = '10px 20px';
     blurButton.style.backgroundColor = 'blue';
     blurButton.style.color = 'white';
@@ -43,7 +43,8 @@ $('#yohoho-iframe').on('load', function () {
     buttonContainer.appendChild(blurButton);
 
     const compressorButton = document.createElement('button');
-    compressorButton.textContent = 'Включить компрессор';
+    compressorButton.id = 'compressor_button';
+    compressorButton.textContent = 'Включить компрессор (F3)';
     compressorButton.style.padding = '10px 20px';
     compressorButton.style.backgroundColor = 'blue';
     compressorButton.style.color = 'white';
@@ -53,7 +54,8 @@ $('#yohoho-iframe').on('load', function () {
     buttonContainer.appendChild(compressorButton);
 
     const flipButton = document.createElement('button');
-    flipButton.textContent = 'Включить отражение';
+    flipButton.id = 'flip_button';
+    flipButton.textContent = 'Включить отражение (F4)';
     flipButton.style.padding = '10px 20px';
     flipButton.style.backgroundColor = 'blue';
     flipButton.style.color = 'white';
@@ -71,7 +73,7 @@ $('#yohoho-iframe').on('load', function () {
                     csource = null;
                     isButtonClicked = false;
                     compressorButton.style.backgroundColor = 'blue';
-                    compressorButton.textContent = 'Включить компрессор';
+                    compressorButton.textContent = 'Включить компрессор (F3)';
                 });
                 const video_iframe = ik.contentDocument.querySelectorAll('video')[0];
                 video_iframe.crossOrigin = 'anonymous';
@@ -95,14 +97,14 @@ $('#yohoho-iframe').on('load', function () {
             compressor.connect(contextC.destination);
             isButtonClicked = true;
             compressorButton.style.backgroundColor = 'orange';
-            compressorButton.textContent = 'Выключить компрессор';
+            compressorButton.textContent = 'Выключить компрессор (F3)';
         } else {
             csource.disconnect(compressor);
             compressor.disconnect(contextC.destination);
             csource.connect(contextC.destination);
             isButtonClicked = false;
             compressorButton.style.backgroundColor = 'blue';
-            compressorButton.textContent = 'Включить компрессор';
+            compressorButton.textContent = 'Включить компрессор (F3)';
         }
     });
 
@@ -114,7 +116,7 @@ $('#yohoho-iframe').on('load', function () {
                 $('#yohoho-iframe').on('load', function () {
                     isFlipButtonClicked = false;
                     flipButton.style.backgroundColor = 'blue';
-                    flipButton.textContent = 'Включить отражение';
+                    flipButton.textContent = 'Включить отражение (F4)';
                 });
             }
         } catch (e) {
@@ -125,12 +127,12 @@ $('#yohoho-iframe').on('load', function () {
             video_iframe.style.transform = 'scaleX(-1)';
             isFlipButtonClicked = true;
             flipButton.style.backgroundColor = 'orange';
-            flipButton.textContent = 'Выключить отражение';
+            flipButton.textContent = 'Выключить отражение (F4)';
         } else {
             video_iframe.style.transform = 'scaleX(1)';
             isFlipButtonClicked = false;
             flipButton.style.backgroundColor = 'blue';
-            flipButton.textContent = 'Включить отражение';
+            flipButton.textContent = 'Включить отражение (F4)';
         }
     });
     if (document.getElementById('yohoho-iframe').getAttribute('src').includes("reyohoho.space")) {
@@ -165,6 +167,22 @@ const switchBlurVideo = (): void => {
    `;
 
    mainWindow?.webContents.executeJavaScript(switchBlurScript);
+};
+
+const switchCompressor = (): void => {
+  const switchCompressorScript = `
+  document.getElementById('compressor_button').click();
+  `;
+
+  mainWindow?.webContents.executeJavaScript(switchCompressorScript);
+};
+
+const switchMirror = (): void => {
+  const switchMirrorScript = `
+  document.getElementById('flip_button').click();
+  `;
+
+  mainWindow?.webContents.executeJavaScript(switchMirrorScript);
 };
 
 if (!AbortSignal.timeout) {
@@ -315,8 +333,10 @@ app.on('will-quit', () => {
 
 app.on('browser-window-focus', () => {
   globalShortcut.register('F5', reload);
+  globalShortcut.register('F2', switchBlurVideo);
+  globalShortcut.register('F3', switchCompressor);
+  globalShortcut.register('F4', switchMirror);
   globalShortcut.register('CommandOrControl+R', reload);
-  globalShortcut.register('CommandOrControl+B', switchBlurVideo);
 })
 
 app.on('browser-window-blur', () => {
