@@ -11,17 +11,15 @@
     "cross-env": "^7.0.3",
     "electron": "^34.0.1",
     "electron-builder": "^25.1.8",
-    "electron-prompt": "^1.7.0",
     "electron-store": "^10.0.1",
     "ts-node": "^10.9.2",
     "typescript": "^5.7.3"
   },
   "dependencies": {
     "@ghostery/adblocker-electron": "^2.5.0",
-    "@types/electron-prompt": "^1.6.5",
-    "electron-prompt": "^1.7.0",
-    "electron-store": "^10.0.1",
-    "cross-fetch": "^4.1.0"
+    "cross-fetch": "^4.1.0",
+    "custom-electron-prompt": "^1.5.8",
+    "electron-store": "^10.0.1"
   },
   "scripts": {
     "build": "tsc",

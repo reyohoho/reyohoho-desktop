@@ -2,7 +2,7 @@ import fetch from 'cross-fetch';
 import { app, BrowserWindow, dialog, session, globalShortcut, shell, screen } from 'electron';
 import { spawn, ChildProcess } from 'child_process';
 import fs from 'fs';
-import prompt from 'electron-prompt';
+import prompt from 'custom-electron-prompt';
 import Store from 'electron-store';
 
 const APP_NAME = `ReYohoho Torrents ${app.getVersion()}`;
@@ -56,7 +56,7 @@ export async function createTorrentsWindow(kpTitle: string): Promise<void> {
   setupButtons(kpTitle);
 
   setTimeout(() => {
-    mainWindow?.loadURL('https://reyohoho.space:9118/', {"extraHeaders" : "pragma: no-cache\n"});
+    mainWindow?.loadURL('https://reyohoho.space:9118/', { "extraHeaders": "pragma: no-cache\n" });
   }, 1000);
 
   mainWindow.on('closed', function () {
@@ -184,44 +184,41 @@ function setupButtons(kpTitle: string): void {
       } else {
         prompt({
           title: 'Авторизация',
-          label: 'Логин ReYohoho',
-          value: store.get('login', '') as string,
-          inputAttrs: {
-            type: 'text'
-          },
-          type: 'input'
+          height: 250,
+          label: 'Введите логин и пароль ReYohoho',
+          multiInputOptions:
+            [
+              {
+                label: "Login", value: store.get('login', '') as string, inputAttrs: {
+                  type: "text",
+                  required: true,
+                }
+              },
+              {
+                label: "Password", value: store.get('password', '') as string, inputAttrs: {
+                  type: "password",
+                  required: true,
+                }
+              },
+            ],
+          resizable: true,
+          type: 'multiInput'
         })
-          .then((result: string | null) => {
+          .then((result: string[] | null) => {
             if (result === null) {
               console.log('User cancelled');
             } else {
-              const login = result;
-              prompt({
-                title: 'Авторизация',
-                label: 'Пароль ReYohoho',
-                value: store.get('password', '') as string,
-                inputAttrs: {
-                  type: 'password'
-                },
-                type: 'input'
-              })
-                .then((result: string | null) => {
-                  if (result === null) {
-                    console.log('User cancelled');
-                  } else {
-                    const password = result;
-                    const credentials = `${login}:${password}`;
-                    store.set("login", login);
-                    store.set("password", password);
-                    const base64Credentials = Buffer.from(credentials).toString("base64");
-                    isNewCredsStored = true;
-                    handleMagnet(url, base64Credentials);
-                  }
-                })
+              const login = result[0];
+              const password = result[1];
+              const credentials = `${login}:${password}`;
+              store.set("login", login);
+              store.set("password", password);
+              const base64Credentials = Buffer.from(credentials).toString("base64");
+              isNewCredsStored = true;
+              handleMagnet(url, base64Credentials);
             }
           })
       }
-
     }
   });
   mainWindow?.webContents.on('did-finish-load', () => {
@@ -229,6 +226,8 @@ function setupButtons(kpTitle: string): void {
       document.getElementById('s').value = "${kpTitle}"
       document.querySelector('#exactSearch').checked=true
       window.localStorage.setItem('exact', 1)
+      document.querySelector('#submitButton').click()
+      document.querySelector('#submitButton').click()
       document.querySelector('#submitButton').click()
     `;
 
@@ -266,6 +265,7 @@ async function showTorrentFilesSelectorDialog(hash: string, files: { id: number;
     label: 'Выберите Файл:',
     type: 'select',
     resizable: true,
+    width: 1000,
     selectOptions: records
   })
     .then((result: string | null) => {

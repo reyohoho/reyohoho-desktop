@@ -5,7 +5,13 @@
     "outDir": "./dist",
     "strict": true,
     "esModuleInterop": true,
-    "moduleResolution": "node16"
+    "skipLibCheck": true,
+    "moduleResolution": "node16",
+    "noImplicitAny": true,
+    "noImplicitThis": true,
+    "strictFunctionTypes": true,
+    "strictNullChecks": true,
+    "types": [],
   },
   "include": [
     "src/**/*"
