@@ -32,7 +32,7 @@ export async function createTorrentsWindow(kpTitle: string): Promise<void> {
     webPreferences: {
       contextIsolation: false,
       webSecurity: false,
-      devTools: true,
+      devTools: false,
     }
   });
   mainWindow.once('ready-to-show', () => {
@@ -118,7 +118,7 @@ function handleMagnet(url: string, base64Credentials: string): void {
       if (response.status === 401) {
         return Promise.reject('Ошибка 401: Неверные учетные данные');
       }
-      
+
       if (!response.ok) {
         return Promise.reject(`Ошибка ${response.status}: ${response.statusText}`);
       }
@@ -254,26 +254,34 @@ app.on("browser-window-created", (e, win) => {
 });
 
 
-async function showTorrentFilesSelectorDialog(hash: string, files: []) {
-  const paths = removeCommonPrefixFromPaths(files).map((file) => file["path"]);
-  const { response } = await dialog.showMessageBox(mainWindow!, {
-    type: "question",
-    message: "Выберите Файл:",
-    buttons: paths,
-    cancelId: -1,
+async function showTorrentFilesSelectorDialog(hash: string, files: { id: number; path: string; length: number }[]) {
+  const records: Record<number, string> = {};
 
-  });
-  if (response >= 0) {
-    const id = files[response];
-    console.log(id);
-    console.log(response);
-    const playUrl = encodeURI(`https://reyohoho.space:5557/play/${hash}/${id["id"]}`);
-    console.log(`Final url: ${playUrl}`);
-    mainWindow?.setTitle(APP_NAME + ' Успешно получена ссылка на стрим...');
-    runVLC([playUrl]);
-  } else {
-    mainWindow?.setTitle(APP_NAME);
+  for (const [index, value] of files.filter((file) => !file.path.endsWith('.srt')).entries()) {
+    records[index] = value.path + '?id=' + value.id;
   }
+  console.log(records);
+  prompt({
+    title: 'Выберите элемент',
+    label: 'Выберите Файл:',
+    type: 'select',
+    resizable: true,
+    selectOptions: records
+  })
+    .then((result: string | null) => {
+      if (result === null) {
+        console.log('User cancelled');
+        mainWindow?.setTitle(APP_NAME);
+      } else {
+        console.log(result);
+        const id = records[Number(result)].split('=').reverse()[0];
+        console.log(id);
+        const playUrl = encodeURI(`https://reyohoho.space:5557/play/${hash}/${id}`);
+        console.log(`Final url: ${playUrl}`);
+        mainWindow?.setTitle(APP_NAME + ' Успешно получена ссылка на стрим...');
+        runVLC([playUrl]);
+      }
+    })
 }
 
 const findCommonPrefix = (paths: string[]): string => {
