@@ -189,10 +189,10 @@ const openTorrents = (): void => {
 
 const switchBlurVideo = (): void => {
    const switchBlurScript = `
-   if(document.getElementById('yohoho-iframe').contentDocument.querySelector('video').style.filter.includes('blur')) {
-    document.getElementById('yohoho-iframe').contentDocument.querySelector('video').style.filter = '';
+   if(document.getElementById('yohoho-iframe').style.filter.includes('blur')) {
+    document.getElementById('yohoho-iframe').style.filter = '';
    } else {
-    document.getElementById('yohoho-iframe').contentDocument.querySelector('video').style.filter = 'blur(50px)';
+    document.getElementById('yohoho-iframe').style.filter = 'blur(50px)';
    }
    `;
 
