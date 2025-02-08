@@ -56,7 +56,7 @@ export async function createTorrentsWindow(kpTitle: string): Promise<void> {
   setupButtons(kpTitle);
 
   setTimeout(() => {
-    mainWindow?.loadURL('https://reyohoho.space:9118/');
+    mainWindow?.loadURL('https://reyohoho.space:9118/', {"extraHeaders" : "pragma: no-cache\n"});
   }, 1000);
 
   mainWindow.on('closed', function () {
