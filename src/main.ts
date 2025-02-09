@@ -10,6 +10,34 @@ let mainWindow: BrowserWindow | null = null;
 
 const isDebug = false;
 
+const addVIPButtonScript = `
+const elementToRemove = document.getElementById('vip-buttonContainer');
+if (elementToRemove) {
+    elementToRemove.remove();
+}
+const buttonContainer = document.createElement('div');
+buttonContainer.id = 'vip-buttonContainer';
+buttonContainer.style.position = 'fixed';
+buttonContainer.style.top = '50px';
+buttonContainer.style.left = '10px';
+buttonContainer.style.zIndex = 10000;
+buttonContainer.style.display = 'flex';
+buttonContainer.style.gap = '10px';
+document.body.appendChild(buttonContainer);
+
+const torrentsButton = document.createElement('button');
+torrentsButton.textContent = 'ReYohoho VIP (F1)';
+torrentsButton.style.padding = '10px 20px';
+torrentsButton.style.backgroundColor = 'purple';
+torrentsButton.style.color = 'white';
+torrentsButton.style.border = 'none';
+torrentsButton.style.borderRadius = '5px';
+torrentsButton.style.cursor = 'pointer';
+torrentsButton.disabled = true;
+torrentsButton.style.pointerEvents = 'none';
+buttonContainer.appendChild(torrentsButton);
+`;
+
 const addButtonsScript = `
 let isButtonClicked = false;
 let csource = null;
@@ -30,18 +58,6 @@ $('#yohoho-iframe').on('load', function () {
     buttonContainer.style.display = 'flex';
     buttonContainer.style.gap = '10px';
     document.body.appendChild(buttonContainer);
-
-    const torrentsButton = document.createElement('button');
-    torrentsButton.textContent = 'ReYohoho VIP (F1)';
-    torrentsButton.style.padding = '10px 20px';
-    torrentsButton.style.backgroundColor = 'purple';
-    torrentsButton.style.color = 'white';
-    torrentsButton.style.border = 'none';
-    torrentsButton.style.borderRadius = '5px';
-    torrentsButton.style.cursor = 'pointer';
-    torrentsButton.disabled = true;
-    torrentsButton.style.pointerEvents = 'none';
-    buttonContainer.appendChild(torrentsButton);
 
     const blurButton = document.createElement('button');
     blurButton.textContent = 'Блюр (F2)';
@@ -304,6 +320,7 @@ async function createWindow(): Promise<void> {
 
   mainWindow.webContents.on('did-start-loading', () => {
     mainWindow?.setTitle(APP_NAME + ' Loading ....');
+    mainWindow?.webContents.executeJavaScript(addVIPButtonScript);
   });
 
   mainWindow.webContents.on('did-stop-loading', () => {
