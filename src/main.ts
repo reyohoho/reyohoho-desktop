@@ -330,6 +330,7 @@ async function createWindow(): Promise<void> {
   blocker.enableBlockingInSession(mainWindow.webContents.session);
 
   mainWindow?.webContents.on('did-finish-load', () => {
+    mainWindow?.webContents.executeJavaScript(addVIPButtonScript);
     mainWindow?.webContents.executeJavaScript(addButtonsScript);
   });
 
