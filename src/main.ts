@@ -172,23 +172,32 @@ const reload = (): void => {
 
 const openTorrents = (): void => {
   if (mainWindow != null) {
-      dialog.showMessageBox(mainWindow, {
-          type: 'none',
-          message: `Пока доступно ограниченному кругу лиц, по всем вопросам: @ReYohoho_support 
+    dialog.showMessageBox(mainWindow, {
+      type: 'none',
+      message: `Пока доступно ограниченному кругу лиц, по всем вопросам: @ReYohoho_support 
 Нажми на значок магнита, чтобы открыть стрим торрента в VLC`,
-          buttons: ['OK'],
-      }).then((result) => {
-          mainWindow?.webContents.executeJavaScript('document.querySelector("#kp-title").innerText')
-              .then(result => {
-                  createTorrentsWindow(result.replace(/\s*\(.*\)$/, ""));
-              })
-      });
+      buttons: ['OK'],
+    }).then((result) => {
+      mainWindow?.webContents.executeJavaScript('document.querySelector("#kp-title").innerText')
+        .then(result => {
+          createTorrentsWindow(result.replace(/\s*\(.*\)$/, ""));
+        })
+    });
   }
 
 };
 
 const switchBlurVideo = (): void => {
-   const switchBlurScript = `
+  if (!mainWindow?.isFocused()) {
+    if (mainWindow?.getOpacity() === 0.4) {
+      mainWindow?.setOpacity(1.0);
+    } else {
+      mainWindow?.setOpacity(0.4);
+    }
+  } else {
+    mainWindow?.setOpacity(1.0);
+  }
+  const switchBlurScript = `
    if(document.getElementById('yohoho-iframe').style.filter.includes('blur')) {
     document.getElementById('yohoho-iframe').style.filter = '';
    } else {
@@ -196,7 +205,7 @@ const switchBlurVideo = (): void => {
    }
    `;
 
-   mainWindow?.webContents.executeJavaScript(switchBlurScript);
+  mainWindow?.webContents.executeJavaScript(switchBlurScript);
 };
 
 const switchCompressor = (): void => {
@@ -274,7 +283,7 @@ async function createWindow(): Promise<void> {
       devTools: isDebug,
     }
   });
-  if(isDebug) {
+  if (isDebug) {
     mainWindow.webContents.openDevTools();
   }
 
@@ -285,7 +294,7 @@ async function createWindow(): Promise<void> {
   });
 
   mainWindow?.loadFile("loader.html");
-  
+
   checkUpdates();
 
   mainWindow.setTitle(APP_NAME + ' Loading ....');
@@ -362,16 +371,20 @@ app.on('will-quit', () => {
 })
 
 app.on('browser-window-focus', () => {
-  globalShortcut.register('F5', reload);
   globalShortcut.register('F1', openTorrents);
   globalShortcut.register('F2', switchBlurVideo);
   globalShortcut.register('F3', switchCompressor);
   globalShortcut.register('F4', switchMirror);
+  globalShortcut.register('F5', reload);
   globalShortcut.register('CommandOrControl+R', reload);
 })
 
 app.on('browser-window-blur', () => {
-  globalShortcut.unregisterAll()
+  globalShortcut.unregister('F1');
+  globalShortcut.unregister('F3');
+  globalShortcut.unregister('F4');
+  globalShortcut.unregister('F5');
+  globalShortcut.unregister('CommandOrControl+R');
 })
 
 app.on('window-all-closed', () => {
