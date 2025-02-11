@@ -4,13 +4,15 @@ import { spawn, ChildProcess } from 'child_process';
 import fs from 'fs';
 import prompt from 'custom-electron-prompt';
 import Store from 'electron-store';
+import { AppConfig } from './main.js'
 
 const APP_NAME = `ReYohoho Torrents ${app.getVersion()}`;
 
 app.commandLine.appendSwitch('disable-site-isolation-trials');
 let mainWindow: BrowserWindow | null = null;
-
+let appConfig: AppConfig | null = null;
 const store = new Store({});
+let userToken: string | null = null;
 
 if (!AbortSignal.timeout) {
   AbortSignal.timeout = function timeout(ms: number): AbortSignal {
@@ -20,7 +22,10 @@ if (!AbortSignal.timeout) {
   };
 }
 
-export async function createTorrentsWindow(kpTitle: string): Promise<void> {
+export async function createTorrentsWindow(kpTitle: string, config: AppConfig, token: string): Promise<void> {
+  appConfig = config;
+  userToken = token;
+  
   mainWindow = new BrowserWindow({
     width: screen.getPrimaryDisplay().workAreaSize.width,
     height: screen.getPrimaryDisplay().workAreaSize.height,
@@ -56,7 +61,7 @@ export async function createTorrentsWindow(kpTitle: string): Promise<void> {
   setupButtons(kpTitle);
 
   setTimeout(() => {
-    mainWindow?.loadURL(`https://reyohoho.space:9118/?rand=${Date.now()}`, { "extraHeaders": "pragma: no-cache\n" });
+    mainWindow?.loadURL(`${appConfig!.torrent_parser_url}?rand=${Date.now()}`, { "extraHeaders": "pragma: no-cache\n" });
   }, 1000);
 
   mainWindow.on('closed', function () {
@@ -100,7 +105,7 @@ async function fetchWithRetry(
 }
 
 function handleMagnet(url: string, base64Credentials: string): void {
-  const apiUrl = 'https://reyohoho.space:5557/torrents';
+  const apiUrl = `${appConfig!.torr_server_url}torrents`;
   const raw = JSON.stringify({
     "action": "add",
     "link": url
@@ -149,7 +154,7 @@ function handleMagnet(url: string, base64Credentials: string): void {
             return;
           }
           if (data["file_stats"].length === 1) {
-            const playUrl = encodeURI(`https://reyohoho.space:5557/play/${hash}/1`);
+            const playUrl = encodeURI(`${appConfig!.torr_server_url}play/${hash}/1`);
             console.log(`Final url: ${playUrl}`);
             mainWindow?.setTitle(APP_NAME + ' Успешно получена ссылка на стрим...');
             runVLC([playUrl]);
@@ -174,50 +179,14 @@ let isNewCredsStored = false;
 function setupButtons(kpTitle: string): void {
   mainWindow?.webContents.on('will-navigate', (event, url) => {
     if (url.startsWith('magnet:')) {
-
       event.preventDefault();
-
       if (isNewCredsStored) {
         const credentials = `${store.get('login', '') as string}:${store.get('password', '') as string}`;
         const base64Credentials = Buffer.from(credentials).toString("base64");
         handleMagnet(url, base64Credentials);
       } else {
-        prompt({
-          title: 'Авторизация',
-          height: 250,
-          label: 'Введите логин и пароль ReYohoho',
-          multiInputOptions:
-            [
-              {
-                label: "Login", value: store.get('login', '') as string, inputAttrs: {
-                  type: "text",
-                  required: true,
-                }
-              },
-              {
-                label: "Password", value: store.get('password', '') as string, inputAttrs: {
-                  type: "password",
-                  required: true,
-                }
-              },
-            ],
-          resizable: true,
-          type: 'multiInput'
-        })
-          .then((result: string[] | null) => {
-            if (result === null) {
-              console.log('User cancelled');
-            } else {
-              const login = result[0];
-              const password = result[1];
-              const credentials = `${login}:${password}`;
-              store.set("login", login);
-              store.set("password", password);
-              const base64Credentials = Buffer.from(credentials).toString("base64");
-              isNewCredsStored = true;
-              handleMagnet(url, base64Credentials);
-            }
-          })
+        isNewCredsStored = true;
+        handleMagnet(url, userToken!);
       }
     }
   });
@@ -238,7 +207,7 @@ function setupButtons(kpTitle: string): void {
 app.on('web-contents-created', (e, wc) => {
   wc.setWindowOpenHandler((handler) => {
     console.log("setWindowOpenHandler: " + handler.url);
-    if (handler.url.startsWith('https://reyohoho.')) {
+    if (handler.url.startsWith(appConfig!.url_handler_deny)) {
       mainWindow?.loadURL(handler.url);
       return { action: "deny" };
     } else {
@@ -276,7 +245,7 @@ async function showTorrentFilesSelectorDialog(hash: string, files: { id: number;
         console.log(result);
         const id = records[Number(result)].split('=').reverse()[0];
         console.log(id);
-        const playUrl = encodeURI(`https://reyohoho.space:5557/play/${hash}/${id}`);
+        const playUrl = encodeURI(`${appConfig!.torr_server_url}play/${hash}/${id}`);
         console.log(`Final url: ${playUrl}`);
         mainWindow?.setTitle(APP_NAME + ' Успешно получена ссылка на стрим...');
         runVLC([playUrl]);

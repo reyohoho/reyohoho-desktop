@@ -2,40 +2,47 @@ import { ElectronBlocker } from '@ghostery/adblocker-electron';
 import fetch from 'cross-fetch';
 import { app, BrowserWindow, dialog, session, globalShortcut, shell, screen } from 'electron';
 import { createTorrentsWindow } from './torrents.js'
+import prompt from 'custom-electron-prompt';
+import Store from 'electron-store';
 
 const APP_NAME = `ReYohoho Desktop ${app.getVersion()}`;
 
 app.commandLine.appendSwitch('disable-site-isolation-trials');
 let mainWindow: BrowserWindow | null = null;
+let appConfig: AppConfig | null = null;
+const store = new Store({});
 
 const isDebug = false;
 
+const config_main_url = "https://gist.githubusercontent.com/reyohoho/c4de4c47dd9b2c3d4b2985a74056e55c/raw/reyohoho_desktop_domains.json"
+
+const config_mirror_url = "https://gitlab.com/-/snippets/4805196/raw/main/snippetfile1.txt"
+
 const addVIPButtonScript = `
-const elementToRemove = document.getElementById('vip-buttonContainer');
-if (elementToRemove) {
-    elementToRemove.remove();
+if(document.getElementById('vip-buttonContainer')) {
+  document.getElementById('vip-buttonContainer').remove();
 }
-const buttonContainer = document.createElement('div');
-buttonContainer.id = 'vip-buttonContainer';
-buttonContainer.style.position = 'fixed';
-buttonContainer.style.top = '50px';
-buttonContainer.style.left = '10px';
-buttonContainer.style.zIndex = 10000;
-buttonContainer.style.display = 'flex';
-buttonContainer.style.gap = '10px';
-document.body.appendChild(buttonContainer);
+const buttonContainerVIP = document.createElement('div');
+buttonContainerVIP.id = 'vip-buttonContainer';
+buttonContainerVIP.style.position = 'fixed';
+buttonContainerVIP.style.top = '50px';
+buttonContainerVIP.style.left = '10px';
+buttonContainerVIP.style.zIndex = 10000;
+buttonContainerVIP.style.display = 'flex';
+buttonContainerVIP.style.gap = '10px';
+document.body.appendChild(buttonContainerVIP);
 
 const torrentsButton = document.createElement('button');
 torrentsButton.textContent = 'ReYohoho VIP (F1)';
 torrentsButton.style.padding = '10px 20px';
-torrentsButton.style.backgroundColor = 'purple';
+torrentsButton.style.backgroundColor = 'black';
 torrentsButton.style.color = 'white';
-torrentsButton.style.border = 'none';
+torrentsButton.style.border = '1px solid white';
 torrentsButton.style.borderRadius = '5px';
 torrentsButton.style.cursor = 'pointer';
 torrentsButton.disabled = true;
 torrentsButton.style.pointerEvents = 'none';
-buttonContainer.appendChild(torrentsButton);
+buttonContainerVIP.appendChild(torrentsButton);
 `;
 
 const addButtonsScript = `
@@ -43,11 +50,13 @@ let isButtonClicked = false;
 let csource = null;
 let isInit = false;
 let isFlipButtonClicked = false;
+if(document.getElementById('rh-buttonContainer')) {
+  document.getElementById('rh-buttonContainer').remove();
+}
 
-$('#yohoho-iframe').on('load', function () {
-    const elementToRemove = document.getElementById('rh-buttonContainer');
-    if (elementToRemove) {
-        elementToRemove.remove();
+function addButtons() {
+    if(document.getElementById('rh-buttonContainer')) {
+      document.getElementById('rh-buttonContainer').remove();
     }
     const buttonContainer = document.createElement('div');
     buttonContainer.id = 'rh-buttonContainer';
@@ -60,11 +69,12 @@ $('#yohoho-iframe').on('load', function () {
     document.body.appendChild(buttonContainer);
 
     const blurButton = document.createElement('button');
+    blurButton.id = 'blur-button';
     blurButton.textContent = 'Блюр (F2)';
     blurButton.style.padding = '10px 20px';
-    blurButton.style.backgroundColor = 'blue';
+    blurButton.style.backgroundColor = 'black';
     blurButton.style.color = 'white';
-    blurButton.style.border = 'none';
+    blurButton.style.border = '1px solid white';
     blurButton.style.borderRadius = '5px';
     blurButton.style.cursor = 'pointer';
     blurButton.disabled = true;
@@ -75,9 +85,9 @@ $('#yohoho-iframe').on('load', function () {
     compressorButton.id = 'compressor_button';
     compressorButton.textContent = 'Включить компрессор (F3)';
     compressorButton.style.padding = '10px 20px';
-    compressorButton.style.backgroundColor = 'blue';
+    compressorButton.style.backgroundColor = 'black';
     compressorButton.style.color = 'white';
-    compressorButton.style.border = 'none';
+    compressorButton.style.border = '1px solid white';
     compressorButton.style.borderRadius = '5px';
     compressorButton.style.cursor = 'pointer';
     buttonContainer.appendChild(compressorButton);
@@ -86,9 +96,9 @@ $('#yohoho-iframe').on('load', function () {
     flipButton.id = 'flip_button';
     flipButton.textContent = 'Включить отражение (F4)';
     flipButton.style.padding = '10px 20px';
-    flipButton.style.backgroundColor = 'blue';
+    flipButton.style.backgroundColor = 'black';
     flipButton.style.color = 'white';
-    flipButton.style.border = 'none';
+    flipButton.style.border = '1px solid white';
     flipButton.style.borderRadius = '5px';
     flipButton.style.cursor = 'pointer';
     buttonContainer.appendChild(flipButton);
@@ -125,14 +135,14 @@ $('#yohoho-iframe').on('load', function () {
             csource.connect(compressor);
             compressor.connect(contextC.destination);
             isButtonClicked = true;
-            compressorButton.style.backgroundColor = 'orange';
+            compressorButton.style.border = '1px solid red';
             compressorButton.textContent = 'Выключить компрессор (F3)';
         } else {
             csource.disconnect(compressor);
             compressor.disconnect(contextC.destination);
             csource.connect(contextC.destination);
             isButtonClicked = false;
-            compressorButton.style.backgroundColor = 'blue';
+            compressorButton.style.border = '1px solid white';
             compressorButton.textContent = 'Включить компрессор (F3)';
         }
     });
@@ -144,7 +154,7 @@ $('#yohoho-iframe').on('load', function () {
             if (!isInit) {
                 $('#yohoho-iframe').on('load', function () {
                     isFlipButtonClicked = false;
-                    flipButton.style.backgroundColor = 'blue';
+                    flipButton.style.border = '1px solid white';
                     flipButton.textContent = 'Включить отражение (F4)';
                 });
             }
@@ -155,51 +165,107 @@ $('#yohoho-iframe').on('load', function () {
         if (!isFlipButtonClicked) {
             video_iframe.style.transform = 'scaleX(-1)';
             isFlipButtonClicked = true;
-            flipButton.style.backgroundColor = 'orange';
+            flipButton.style.border = '1px solid red';
             flipButton.textContent = 'Выключить отражение (F4)';
         } else {
             video_iframe.style.transform = 'scaleX(1)';
             isFlipButtonClicked = false;
-            flipButton.style.backgroundColor = 'blue';
+            flipButton.style.border = '1px solid white';
             flipButton.textContent = 'Включить отражение (F4)';
         }
     });
     if (document.getElementById('yohoho-iframe').getAttribute('src').includes("reyohoho.space")) {
         compressorButton.disabled = true;
-        compressorButton.style.backgroundColor = 'gray';
+        compressorButton.style.border = '1px solid gray';
         compressorButton.textContent = 'Компрессор в плеере';
     }
     if (document.getElementById('yohoho-iframe').getAttribute('src').includes("allarknow") || document.getElementById('yohoho-iframe').getAttribute('src').includes("videoframe") || document.getElementById('yohoho-iframe').getAttribute('src').includes("kinoserial.net")) {
         compressorButton.disabled = true;
-        compressorButton.style.backgroundColor = 'gray';
+        compressorButton.style.border = '1px solid gray';
         compressorButton.textContent = 'Компрессор недоступен';
     }
+}
 
-});
+if(document.getElementById('yohoho-iframe')) {
+  var iframeDoc = document.getElementById('yohoho-iframe').contentDocument || document.getElementById('yohoho-iframe').contentWindow.document;
+  if(iframeDoc.readyState === 'completed') {
+    addButtons();
+  } else {
+    $('#yohoho-iframe').on('load', function () {
+      addButtons();
+    }); 
+  }
+} else {
+  $('#yohoho-iframe').on('load', function () {
+    addButtons();
+  }); 
+}
 `;
+
+const addVIPButton = (): void => {
+  if (mainWindow?.webContents.getURL().includes("contact.html") || mainWindow?.webContents.getURL().includes("top.html")) {
+    mainWindow?.webContents.executeJavaScript(`
+      if(document.getElementById('vip-buttonContainer')) {
+        document.getElementById('vip-buttonContainer').remove();
+      }
+      `);
+  } else {
+    mainWindow?.webContents.executeJavaScript(addVIPButtonScript);
+  }
+};
 
 const reload = (): void => {
   if (mainWindow?.webContents.getURL().includes("loader.html")) {
-    mainWindow?.loadURL('https://reyohoho.github.io/reyohoho');
+    mainWindow?.loadURL(appConfig!.main_site_url);
   } else {
     mainWindow?.reload();
   }
 };
 
 const openTorrents = (): void => {
-  if (mainWindow != null) {
-    dialog.showMessageBox(mainWindow, {
-      type: 'none',
-      message: `Пока доступно ограниченному кругу лиц, по всем вопросам: @ReYohoho_support 
-Нажми на значок магнита, чтобы открыть стрим торрента в VLC`,
-      buttons: ['OK'],
-    }).then((result) => {
-      mainWindow?.webContents.executeJavaScript('document.querySelector("#kp-title").innerText')
-        .then(result => {
-          createTorrentsWindow(result.replace(/\s*\(.*\)$/, ""));
-        })
-    });
-  }
+  prompt({
+    title: 'Авторизация',
+    height: 350,
+    width: 500,
+    useHtmlLabel: true,
+    label: `Просмотр торрентов без скачки через сервер ReYohoho<br>
+    Пример работы <a target="_blank" href="https://storage.yandexcloud.net/miscrhhhh/2025-02-07%2010-43-11.mp4">видео</a><br>
+    Введите логин и пароль ReYohoho VIP<br>
+    Данные можно получить по подписке на <a target="_blank" href="${appConfig!.boosty_vip_link}">бусти</a>`,
+    multiInputOptions:
+      [
+        {
+          label: "Login", value: store.get('login', '') as string, inputAttrs: {
+            type: "text",
+            required: true,
+          }
+        },
+        {
+          label: "Password", value: store.get('password', '') as string, inputAttrs: {
+            type: "password",
+            required: true,
+          }
+        },
+      ],
+    resizable: true,
+    type: 'multiInput'
+  })
+    .then((result: string[] | null) => {
+      if (result === null) {
+        console.log('User cancelled');
+      } else {
+        const login = result[0];
+        const password = result[1];
+        const credentials = `${login}:${password}`;
+        store.set("login", login);
+        store.set("password", password);
+        const base64Credentials = Buffer.from(credentials).toString("base64");
+        mainWindow?.webContents.executeJavaScript('document.querySelector("#kp-title").innerText')
+          .then(result => {
+            createTorrentsWindow(result.replace(/\s*\(.*\)$/, ""), appConfig!, base64Credentials);
+          })
+      }
+    })
 
 };
 
@@ -215,8 +281,10 @@ const switchBlurVideo = (): void => {
   }
   const switchBlurScript = `
    if(document.getElementById('yohoho-iframe').style.filter.includes('blur')) {
+    document.getElementById('blur-button').style.border = '1px solid white';
     document.getElementById('yohoho-iframe').style.filter = '';
    } else {
+    document.getElementById('blur-button').style.border = '1px solid red';
     document.getElementById('yohoho-iframe').style.filter = 'blur(50px)';
    }
    `;
@@ -259,7 +327,7 @@ interface AppVersionResponse {
 }
 
 function checkUpdates(): void {
-  fetch('https://reyohoho.space:4437/appversion', { signal: AbortSignal.timeout(5000) })
+  fetch(appConfig!.app_version_url, { signal: AbortSignal.timeout(5000) })
     .then(response => response.json() as Promise<AppVersionResponse>)
     .then(data => {
       const update_info = data["reyohoho-desktop"];
@@ -281,26 +349,99 @@ function checkUpdates(): void {
     })
     .catch(error => {
       console.error('Error check updates:', error);
+      if (mainWindow != null) {
+        dialog.showMessageBox(mainWindow, {
+          type: 'error',
+          title: `Произошла ошибка при проверке обновлений`,
+          message: `${error}`
+        })
+      }
     });
 }
 
-async function createWindow(): Promise<void> {
-  mainWindow = new BrowserWindow({
-    width: screen.getPrimaryDisplay().workAreaSize.width,
-    height: screen.getPrimaryDisplay().workAreaSize.height,
-    autoHideMenuBar: true,
-    darkTheme: true,
-    backgroundColor: "#000",
-    icon: 'icon.png',
-    show: false,
-    webPreferences: {
-      contextIsolation: false,
-      webSecurity: false,
-      devTools: isDebug,
-    }
-  });
+export interface AppConfig {
+  ad_block_url: string,
+  main_site_url: string,
+  torrent_parser_url: string,
+  torr_server_url: string,
+  app_version_url: string,
+  alloha_origin_url: string,
+  alloha_referer: string,
+  alloha_cdn_filter_url: string,
+  lumex_origin_url: string,
+  lumex_referer: string,
+  lumex_cdn_filter_url: string,
+  url_handler_deny: string,
+  boosty_vip_link: string
+}
+
+function loadConfig(config_url: string): void {
+  fetch(config_url)
+    .then(response => response.json() as Promise<AppConfig>)
+    .then(data => {
+      appConfig = data;
+      const filter = {
+        urls: [appConfig!.alloha_cdn_filter_url, appConfig!.lumex_cdn_filter_url]
+      };
+
+      session.defaultSession.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
+        if (details.requestHeaders['Referer'].includes(appConfig!.alloha_referer)) {
+          details.requestHeaders['Origin'] = appConfig!.alloha_origin_url;
+        }
+        if (details.requestHeaders['Referer'].includes(appConfig!.lumex_referer)) {
+          details.requestHeaders['Origin'] = appConfig!.lumex_origin_url;
+        }
+        callback({ requestHeaders: details.requestHeaders });
+      });
+
+      createWindow('');
+    })
+    .catch(error => {
+      console.error('Error load config:', error);
+      createWindow(error);
+    });
+}
+
+async function createWindow(configError: any | ''): Promise<void> {
+  if (!mainWindow) {
+    mainWindow = new BrowserWindow({
+      width: screen.getPrimaryDisplay().workAreaSize.width,
+      height: screen.getPrimaryDisplay().workAreaSize.height,
+      autoHideMenuBar: true,
+      darkTheme: true,
+      backgroundColor: "#000",
+      icon: 'icon.png',
+      show: false,
+      webPreferences: {
+        contextIsolation: false,
+        webSecurity: false,
+        devTools: isDebug,
+      }
+    });
+  }
+
   if (isDebug) {
     mainWindow.webContents.openDevTools();
+  }
+
+  if (!appConfig) {
+    if (mainWindow != null) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'error',
+        title: `Произошла ошибка при загрузке конфига`,
+        message: `${configError}`,
+        buttons: ['Закрыть', 'Перезапустить'],
+      }).then((result) => {
+        if (result.response === 1) {
+          loadConfig(config_mirror_url);
+        } else {
+          if (process.platform !== 'darwin') app.quit();
+        }
+      });
+    }
+    return;
+  } else {
+    checkUpdates();
   }
 
   mainWindow.once('ready-to-show', () => {
@@ -311,26 +452,39 @@ async function createWindow(): Promise<void> {
 
   mainWindow?.loadFile("loader.html");
 
-  checkUpdates();
-
   mainWindow.setTitle(APP_NAME + ' Loading ....');
-  const blocker = await ElectronBlocker.fromLists(fetch, [
-    'https://reyohoho.space:4437/template/easylist.txt'
-  ]);
+
+  let blocker = null;
+
+  try {
+    blocker = await ElectronBlocker.fromLists(fetch, [
+      appConfig!.ad_block_url
+    ]);
+  } catch (e) {
+    console.log(e);
+    if (mainWindow != null) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'error',
+        title: `Произошла ошибка при загрузке AdBlock`,
+        message: `${e}`
+      })
+    }
+  }
 
   mainWindow.webContents.on('did-start-loading', () => {
     mainWindow?.setTitle(APP_NAME + ' Loading ....');
-    mainWindow?.webContents.executeJavaScript(addVIPButtonScript);
+    addVIPButton();
+    mainWindow?.webContents.executeJavaScript(addButtonsScript);
   });
 
   mainWindow.webContents.on('did-stop-loading', () => {
     mainWindow?.setTitle(APP_NAME);
   });
 
-  blocker.enableBlockingInSession(mainWindow.webContents.session);
+  blocker?.enableBlockingInSession(mainWindow.webContents.session);
 
   mainWindow?.webContents.on('did-finish-load', () => {
-    mainWindow?.webContents.executeJavaScript(addVIPButtonScript);
+    addVIPButton();
     mainWindow?.webContents.executeJavaScript(addButtonsScript);
   });
 
@@ -338,49 +492,43 @@ async function createWindow(): Promise<void> {
     mainWindow = null
   })
 
-  mainWindow?.loadURL('https://reyohoho.github.io/reyohoho');
+  mainWindow?.loadURL(appConfig!.main_site_url);
 
   mainWindow.on('closed', function () {
     mainWindow = null
   })
 }
 
+app.on("browser-window-created", (e, win) => {
+  win.removeMenu();
+});
+
+app.whenReady().then(() => {
+  loadConfig(config_main_url);
+});
+
 app.on('web-contents-created', (e, wc) => {
   wc.setWindowOpenHandler((handler) => {
-    console.log("setWindowOpenHandler: " + handler.url);
-    if (handler.url.startsWith('https://reyohoho.')) {
+    try {
+      console.log("setWindowOpenHandler: " + handler.url);
+      if (BrowserWindow.getAllWindows()[0] && BrowserWindow.getAllWindows()[0].getTitle() === "Авторизация") {
+        BrowserWindow.getAllWindows()[0].close();
+      }
+      if (BrowserWindow.getAllWindows()[1] && BrowserWindow.getAllWindows()[1].getTitle() === "Авторизация") {
+        BrowserWindow.getAllWindows()[1].close();
+      }
+      if (BrowserWindow.getAllWindows()[2] && BrowserWindow.getAllWindows()[2].getTitle() === "Авторизация") {
+        BrowserWindow.getAllWindows()[2].close();
+      }
+    } catch (e) {}
+
+    if (handler.url.startsWith(appConfig!.url_handler_deny)) {
       mainWindow?.loadURL(handler.url);
       return { action: "deny" };
     } else {
       shell.openExternal(handler.url);
       return { action: "deny" };
     }
-  });
-});
-
-app.on("browser-window-created", (e, win) => {
-  win.removeMenu();
-});
-
-app.whenReady().then(() => {
-  const filter = {
-    urls: ['https://*.video-ik-ok-ii.space/*', 'https://*.lumex.space/*']
-  };
-
-  session.defaultSession.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
-    if (details.requestHeaders['Referer'].includes("allarknow")) {
-      details.requestHeaders['Origin'] = 'https://attractive-as.allarknow.online/';
-    }
-    if (details.requestHeaders['Referer'].includes("lumex")) {
-      details.requestHeaders['Origin'] = 'https://p.lumex.space';
-    }
-    callback({ requestHeaders: details.requestHeaders });
-  });
-
-  createWindow();
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
 
