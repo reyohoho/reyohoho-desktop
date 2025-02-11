@@ -187,20 +187,19 @@ function addButtons() {
 }
 
 $(document).ready(function() {
-  if(document.getElementById('yohoho-iframe')) {
-    var iframeDoc = document.getElementById('yohoho-iframe').contentDocument || document.getElementById('yohoho-iframe').contentWindow.document;
-    if(iframeDoc.readyState === 'completed') {
+  function checkIframe() {
+    if ($('#yohoho-iframe').length > 0) {
       addButtons();
-    } else {
-      $('#yohoho-iframe').on('load', function () {
-        addButtons();
-      }); 
+      clearInterval(intervalId);
     }
-  } else {
-    $('#yohoho-iframe').on('load', function () {
-      addButtons();
-    }); 
   }
+
+  var intervalId = setInterval(checkIframe, 500);
+
+  $('#yohoho-iframe').on('load', function () {
+    addButtons();
+    clearInterval(intervalId);
+  });
 });
 `;
 
