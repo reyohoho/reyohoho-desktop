@@ -186,20 +186,22 @@ function addButtons() {
     }
 }
 
-if(document.getElementById('yohoho-iframe')) {
-  var iframeDoc = document.getElementById('yohoho-iframe').contentDocument || document.getElementById('yohoho-iframe').contentWindow.document;
-  if(iframeDoc.readyState === 'completed') {
-    addButtons();
+$(document).ready(function() {
+  if(document.getElementById('yohoho-iframe')) {
+    var iframeDoc = document.getElementById('yohoho-iframe').contentDocument || document.getElementById('yohoho-iframe').contentWindow.document;
+    if(iframeDoc.readyState === 'completed') {
+      addButtons();
+    } else {
+      $('#yohoho-iframe').on('load', function () {
+        addButtons();
+      }); 
+    }
   } else {
     $('#yohoho-iframe').on('load', function () {
       addButtons();
     }); 
   }
-} else {
-  $('#yohoho-iframe').on('load', function () {
-    addButtons();
-  }); 
-}
+});
 `;
 
 const addVIPButton = (): void => {
