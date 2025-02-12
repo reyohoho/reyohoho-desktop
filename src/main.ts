@@ -223,51 +223,61 @@ const reload = (): void => {
   }
 };
 
+let isNewCredsStored = false;
 const openTorrents = (): void => {
-  prompt({
-    title: 'Авторизация',
-    height: 350,
-    width: 500,
-    useHtmlLabel: true,
-    label: `Просмотр торрентов без скачки через сервер ReYohoho<br>
-    Пример работы <a target="_blank" href="https://storage.yandexcloud.net/miscrhhhh/2025-02-07%2010-43-11.mp4">видео</a><br>
-    Введите логин и пароль ReYohoho VIP<br>
-    Данные можно получить по подписке на <a target="_blank" href="${appConfig!.boosty_vip_link}">бусти</a>`,
-    multiInputOptions:
-      [
-        {
-          label: "Login", value: store.get('login', '') as string, inputAttrs: {
-            type: "text",
-            required: true,
-          }
-        },
-        {
-          label: "Password", value: store.get('password', '') as string, inputAttrs: {
-            type: "password",
-            required: true,
-          }
-        },
-      ],
-    resizable: true,
-    type: 'multiInput'
-  })
-    .then((result: string[] | null) => {
-      if (result === null) {
-        console.log('User cancelled');
-      } else {
-        const login = result[0];
-        const password = result[1];
-        const credentials = `${login}:${password}`;
-        store.set("login", login);
-        store.set("password", password);
-        const base64Credentials = Buffer.from(credentials).toString("base64");
-        mainWindow?.webContents.executeJavaScript('document.querySelector("#kp-title").innerText')
-          .then(result => {
-            createTorrentsWindow(result.replace(/\s*\(.*\)$/, ""), appConfig!, base64Credentials);
-          })
-      }
+  if (isNewCredsStored) {
+    const credentials = `${store.get('login', '') as string}:${store.get('password', '') as string}`;
+    const base64Credentials = Buffer.from(credentials).toString("base64");
+    mainWindow?.webContents.executeJavaScript('document.querySelector("#kp-title").innerText')
+      .then(result => {
+        createTorrentsWindow(result.replace(/\s*\(.*\)$/, ""), appConfig!, base64Credentials);
+      })
+  } else {
+    prompt({
+      title: 'Авторизация',
+      height: 350,
+      width: 500,
+      useHtmlLabel: true,
+      label: `Просмотр торрентов без скачки через сервер ReYohoho<br>
+      Пример работы <a target="_blank" href="https://storage.yandexcloud.net/miscrhhhh/2025-02-07%2010-43-11.mp4">видео</a><br>
+      Введите логин и пароль ReYohoho VIP<br>
+      Данные можно получить по подписке на <a target="_blank" href="${appConfig!.boosty_vip_link}">бусти</a>`,
+      multiInputOptions:
+        [
+          {
+            label: "Login", value: store.get('login', '') as string, inputAttrs: {
+              type: "text",
+              required: true,
+            }
+          },
+          {
+            label: "Password", value: store.get('password', '') as string, inputAttrs: {
+              type: "password",
+              required: true,
+            }
+          },
+        ],
+      resizable: true,
+      type: 'multiInput'
     })
-
+      .then((result: string[] | null) => {
+        if (result === null) {
+          console.log('User cancelled');
+        } else {
+          const login = result[0];
+          const password = result[1];
+          const credentials = `${login}:${password}`;
+          store.set("login", login);
+          store.set("password", password);
+          const base64Credentials = Buffer.from(credentials).toString("base64");
+          isNewCredsStored = true;
+          mainWindow?.webContents.executeJavaScript('document.querySelector("#kp-title").innerText')
+            .then(result => {
+              createTorrentsWindow(result.replace(/\s*\(.*\)$/, ""), appConfig!, base64Credentials);
+            })
+        }
+      })
+  }
 };
 
 const switchBlurVideo = (): void => {
@@ -521,7 +531,7 @@ app.on('web-contents-created', (e, wc) => {
       if (BrowserWindow.getAllWindows()[2] && BrowserWindow.getAllWindows()[2].getTitle() === "Авторизация") {
         BrowserWindow.getAllWindows()[2].close();
       }
-    } catch (e) {}
+    } catch (e) { }
 
     if (handler.url.startsWith(appConfig!.url_handler_deny)) {
       mainWindow?.loadURL(handler.url);

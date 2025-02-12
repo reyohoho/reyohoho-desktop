@@ -1,5 +1,5 @@
 import fetch from 'cross-fetch';
-import { app, BrowserWindow, dialog, session, globalShortcut, shell, screen } from 'electron';
+import { app, BrowserWindow, dialog, shell, screen, Menu } from 'electron';
 import { spawn, ChildProcess } from 'child_process';
 import fs from 'fs';
 import prompt from 'custom-electron-prompt';
@@ -22,14 +22,48 @@ if (!AbortSignal.timeout) {
   };
 }
 
+function changePlayerPath(): void {
+  let initialPath = '';
+  let hintPath = '';
+  let fileFilters;
+  if (process.platform === 'win32') {
+    fileFilters = [
+      { name: 'Executable Files', extensions: ['exe'] },
+      { name: 'All Files', extensions: ['*'] }
+    ]
+    initialPath = 'C:\\Program Files\\VideoLAN\\VLC\\vlc.exe';
+    hintPath = 'Укажите путь к VLC.exe или к mpc-hc64.exe';
+  } else {
+    fileFilters = [
+      { name: 'All Files', extensions: ['*'] }
+    ]
+    initialPath = '/usr/bin/';
+    hintPath = 'Укажите путь к бинарнику VLC';
+  }
+
+  dialog.showOpenDialog(mainWindow!, {
+    title: hintPath,
+    defaultPath: initialPath,
+    filters: fileFilters,
+    properties: ['openFile']
+  }).then(result => {
+    if (!result.canceled && result.filePaths.length > 0) {
+      initialPath = result.filePaths[0];
+      store.set('vlc_path', initialPath);
+    }
+  }).catch(err => {
+    console.error('Ошибка при выборе файла:', err);
+    mainWindow?.setTitle(APP_NAME + ` Ошибка при выборе файла: ${err}`);
+  });
+}
+
 export async function createTorrentsWindow(kpTitle: string, config: AppConfig, token: string): Promise<void> {
   appConfig = config;
   userToken = token;
-  
+
   mainWindow = new BrowserWindow({
     width: screen.getPrimaryDisplay().workAreaSize.width,
     height: screen.getPrimaryDisplay().workAreaSize.height,
-    autoHideMenuBar: true,
     darkTheme: true,
     backgroundColor: "#000",
     icon: 'icon.png',
@@ -60,6 +94,22 @@ export async function createTorrentsWindow(kpTitle: string, config: AppConfig, t
 
   setupButtons(kpTitle);
 
+  const menu = Menu.buildFromTemplate([
+    {
+      label: 'Настройки',
+      submenu: [
+        {
+          label: 'Сменить путь к плееру',
+          click: () => {
+            changePlayerPath();
+          }
+        }
+      ]
+    }
+  ]);
+
+  Menu.setApplicationMenu(menu);
+
   setTimeout(() => {
     mainWindow?.loadURL(`${appConfig!.torrent_parser_url}?rand=${Date.now()}`, { "extraHeaders": "pragma: no-cache\n" });
   }, 1000);
@@ -83,7 +133,7 @@ async function fetchWithRetry(
 ): Promise<any> {
   try {
     if (retryCount > 50) {
-      mainWindow?.setTitle(APP_NAME + ` Не удалось поулчить hash(попыток: ${retryCount})`);
+      mainWindow?.setTitle(APP_NAME + ` Не удалось получить hash(попыток: ${retryCount})`);
       return;
     }
     mainWindow?.setTitle(APP_NAME + ` Получаем hash... попытка ${retryCount}`);
@@ -157,7 +207,7 @@ function handleMagnet(url: string, base64Credentials: string): void {
             const playUrl = encodeURI(`${appConfig!.torr_server_url}play/${hash}/1`);
             console.log(`Final url: ${playUrl}`);
             mainWindow?.setTitle(APP_NAME + ' Успешно получена ссылка на стрим...');
-            runVLC([playUrl]);
+            preparePlayer([playUrl]);
           } else {
             showTorrentFilesSelectorDialog(hash, data["file_stats"]);
           }
@@ -175,19 +225,11 @@ function handleMagnet(url: string, base64Credentials: string): void {
     });
 }
 
-let isNewCredsStored = false;
 function setupButtons(kpTitle: string): void {
   mainWindow?.webContents.on('will-navigate', (event, url) => {
     if (url.startsWith('magnet:')) {
       event.preventDefault();
-      if (isNewCredsStored) {
-        const credentials = `${store.get('login', '') as string}:${store.get('password', '') as string}`;
-        const base64Credentials = Buffer.from(credentials).toString("base64");
-        handleMagnet(url, base64Credentials);
-      } else {
-        isNewCredsStored = true;
-        handleMagnet(url, userToken!);
-      }
+      handleMagnet(url, userToken!);
     }
   });
   mainWindow?.webContents.on('did-finish-load', () => {
@@ -217,11 +259,6 @@ app.on('web-contents-created', (e, wc) => {
   });
 });
 
-app.on("browser-window-created", (e, win) => {
-  win.removeMenu();
-});
-
-
 async function showTorrentFilesSelectorDialog(hash: string, files: { id: number; path: string; length: number }[]) {
   const records: Record<number, string> = {};
 
@@ -248,7 +285,7 @@ async function showTorrentFilesSelectorDialog(hash: string, files: { id: number;
         const playUrl = encodeURI(`${appConfig!.torr_server_url}play/${hash}/${id}`);
         console.log(`Final url: ${playUrl}`);
         mainWindow?.setTitle(APP_NAME + ' Успешно получена ссылка на стрим...');
-        runVLC([playUrl]);
+        preparePlayer([playUrl]);
       }
     })
 }
@@ -279,75 +316,70 @@ const removeCommonPrefixFromPaths = (fileStats: { id: number; path: string; leng
   });
 };
 
-function runVLC(parameters: string[]): void {
-  mainWindow?.setTitle(APP_NAME + ` Запускаем VLC...`);
-  let initialPath = store.get('vlc_path', 'C:\\Program Files\\VideoLAN\\VLC\\vlc.exe') as string;
-  if (fs.existsSync(initialPath)) {
-    const vlcProcess: ChildProcess = spawn(initialPath, parameters);
-    vlcProcess.stdout?.on('data', (data: Buffer) => {
-      console.log(`VLC stdout: ${data.toString()}`);
-    });
+function runPlayer(parameters: string[]) {
+  let playerPath = store.get('vlc_path', '') as string;
+  const playerProcess: ChildProcess = spawn(playerPath, parameters);
+  playerProcess.stdout?.on('data', (data: Buffer) => {
+    console.log(`player stdout: ${data.toString()}`);
+  });
 
-    vlcProcess.stderr?.on('data', (data: Buffer) => {
-      console.error(`VLC stderr: ${data.toString()}`);
-      mainWindow?.setTitle(APP_NAME + ` VLC stderr: ${data.toString()}`);
-    });
+  playerProcess.stderr?.on('data', (data: Buffer) => {
+    console.error(`player stderr: ${data.toString()}`);
+    mainWindow?.setTitle(APP_NAME + ` player stderr: ${data.toString()}`);
+  });
 
-    vlcProcess.on('close', (code: number | null) => {
-      if (code === 0) {
-        console.log('VLC process exited successfully.');
-        mainWindow?.setTitle(APP_NAME);
-      } else {
-        console.error(`VLC process exited with code ${code}`);
-        mainWindow?.setTitle(APP_NAME + ` VLC process exited with code: ${code}`);
-      }
-    });
+  playerProcess.on('close', (code: number | null) => {
+    if (code === 0) {
+      console.log('player process exited successfully.');
+    } else {
+      console.error(`player process exited with code ${code}`);
+      mainWindow?.setTitle(APP_NAME + ` player process exited with code: ${code}`);
+    }
+  });
 
-    vlcProcess.on('error', (err: Error) => {
-      console.error(`Failed to start VLC: ${err.message}`);
-      mainWindow?.setTitle(APP_NAME + ` Failed to start VLC: ${err.message}`);
-    });
+  playerProcess.on('error', (err: Error) => {
+    console.error(`Failed to start player: ${err.message}`);
+    mainWindow?.setTitle(APP_NAME + ` Failed to start player: ${err.message}`);
+  });
+}
+
+function preparePlayer(parameters: string[]): void {
+  mainWindow?.setTitle(APP_NAME + ` Запускаем плеер...`);
+  let initialPath = store.get('vlc_path', '') as string;
+  if (initialPath.length !== 0 && fs.existsSync(initialPath)) {
+    runPlayer(parameters);
+    return;
+  }
+  let hintPath = '';
+  let fileFilters;
+  if (process.platform === 'win32') {
+    fileFilters = [
+      { name: 'Executable Files', extensions: ['exe'] },
+      { name: 'All Files', extensions: ['*'] }
+    ]
+    initialPath = 'C:\\Program Files\\VideoLAN\\VLC\\vlc.exe';
+    hintPath = 'Укажите путь к VLC.exe или к mpc-hc64.exe';
   } else {
-    dialog.showOpenDialog(mainWindow!, {
-      title: 'Выберите VLC.exe файл',
-      defaultPath: initialPath,
-      filters: [
-        { name: 'Executable Files', extensions: ['exe'] },
-        { name: 'All Files', extensions: ['*'] }
-      ],
-      properties: ['openFile']
-    }).then(result => {
-      if (!result.canceled && result.filePaths.length > 0) {
-        initialPath = result.filePaths[0];
-        store.set('vlc_path', initialPath);
-        const vlcProcess: ChildProcess = spawn(initialPath, parameters);
-        vlcProcess.stdout?.on('data', (data: Buffer) => {
-          console.log(`VLC stdout: ${data.toString()}`);
-        });
-
-        vlcProcess.stderr?.on('data', (data: Buffer) => {
-          console.error(`VLC stderr: ${data.toString()}`);
-          mainWindow?.setTitle(APP_NAME + ` VLC stderr: ${data.toString()}`);
-        });
-
-        vlcProcess.on('close', (code: number | null) => {
-          if (code === 0) {
-            console.log('VLC process exited successfully.');
-          } else {
-            console.error(`VLC process exited with code ${code}`);
-            mainWindow?.setTitle(APP_NAME + ` VLC process exited with code: ${code}`);
-          }
-        });
-
-        vlcProcess.on('error', (err: Error) => {
-          console.error(`Failed to start VLC: ${err.message}`);
-          mainWindow?.setTitle(APP_NAME + ` Failed to start VLC: ${err.message}`);
-        });
-      }
-    }).catch(err => {
-      console.error('Ошибка при выборе файла:', err);
-      mainWindow?.setTitle(APP_NAME + ` Ошибка при выборе файла: ${err}`);
-    });
+    fileFilters = [
+      { name: 'All Files', extensions: ['*'] }
+    ]
+    initialPath = '/usr/bin/';
+    hintPath = 'Укажите путь к бинарнику VLC';
   }
 
+  dialog.showOpenDialog(mainWindow!, {
+    title: hintPath,
+    defaultPath: initialPath,
+    filters: fileFilters,
+    properties: ['openFile']
+  }).then(result => {
+    if (!result.canceled && result.filePaths.length > 0) {
+      initialPath = result.filePaths[0];
+      store.set('vlc_path', initialPath);
+      runPlayer(parameters);
+    }
+  }).catch(err => {
+    console.error('Ошибка при выборе файла:', err);
+    mainWindow?.setTitle(APP_NAME + ` Ошибка при выборе файла: ${err}`);
+  });
 }
