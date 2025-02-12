@@ -20,6 +20,20 @@ const config_mirror_url = "https://gitlab.com/-/snippets/4805196/raw/main/snippe
 
 let main_site_url;
 
+const menu = Menu.buildFromTemplate([
+  {
+    label: 'Настройки',
+    submenu: [
+      {
+        label: 'Сменить URL зеркала',
+        click: () => {
+          changeWebUrlMirror();
+        }
+      }
+    ]
+  }
+]);
+
 const addVIPButtonScript = `
 if(document.getElementById('vip-buttonContainer')) {
   document.getElementById('vip-buttonContainer').remove();
@@ -236,6 +250,8 @@ const openTorrents = (): void => {
       })
   } else {
     prompt({
+      skipTaskbar: false,
+      alwaysOnTop: true,
       title: 'Авторизация',
       height: 350,
       width: 500,
@@ -417,6 +433,8 @@ function loadConfig(config_url: string): void {
 
 function changeWebUrlMirror():void {
   prompt({
+    skipTaskbar: false,
+    alwaysOnTop: true,
     title: 'Укажите путь к зеркалу:',
     useHtmlLabel: true,
     height: 250,
@@ -503,21 +521,7 @@ async function createWindow(configError: any | ''): Promise<void> {
     mainWindow?.focus();
   });
 
-  const menu = Menu.buildFromTemplate([
-    {
-      label: 'Настройки',
-      submenu: [
-        {
-          label: 'Сменить URL зеркала',
-          click: () => {
-            changeWebUrlMirror();
-          }
-        }
-      ]
-    }
-  ]);
-
-  Menu.setApplicationMenu(menu);
+  mainWindow?.setMenu(menu);
 
   mainWindow?.loadFile("loader.html");
 

@@ -13,6 +13,19 @@ let mainWindow: BrowserWindow | null = null;
 let appConfig: AppConfig | null = null;
 const store = new Store({});
 let userToken: string | null = null;
+const menu = Menu.buildFromTemplate([
+  {
+    label: 'Настройки',
+    submenu: [
+      {
+        label: 'Сменить путь к плееру',
+        click: () => {
+          changePlayerPath();
+        }
+      }
+    ]
+  }
+]);
 
 if (!AbortSignal.timeout) {
   AbortSignal.timeout = function timeout(ms: number): AbortSignal {
@@ -94,21 +107,7 @@ export async function createTorrentsWindow(kpTitle: string, config: AppConfig, t
 
   setupButtons(kpTitle);
 
-  const menu = Menu.buildFromTemplate([
-    {
-      label: 'Настройки',
-      submenu: [
-        {
-          label: 'Сменить путь к плееру',
-          click: () => {
-            changePlayerPath();
-          }
-        }
-      ]
-    }
-  ]);
-
-  Menu.setApplicationMenu(menu);
+  mainWindow?.setMenu(menu);
 
   setTimeout(() => {
     mainWindow?.loadURL(`${appConfig!.torrent_parser_url}?rand=${Date.now()}`, { "extraHeaders": "pragma: no-cache\n" });
@@ -267,6 +266,8 @@ async function showTorrentFilesSelectorDialog(hash: string, files: { id: number;
   }
   console.log(records);
   prompt({
+    skipTaskbar: false,
+    alwaysOnTop: true,
     title: 'Выберите элемент',
     label: 'Выберите Файл:',
     type: 'select',
