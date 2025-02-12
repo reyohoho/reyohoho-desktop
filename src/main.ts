@@ -1,6 +1,6 @@
 import { ElectronBlocker } from '@ghostery/adblocker-electron';
 import fetch from 'cross-fetch';
-import { app, BrowserWindow, dialog, session, globalShortcut, shell, screen } from 'electron';
+import { app, BrowserWindow, dialog, session, globalShortcut, shell, screen, Menu } from 'electron';
 import { createTorrentsWindow } from './torrents.js'
 import prompt from 'custom-electron-prompt';
 import Store from 'electron-store';
@@ -17,6 +17,8 @@ const isDebug = false;
 const config_main_url = "https://gist.githubusercontent.com/reyohoho/c4de4c47dd9b2c3d4b2985a74056e55c/raw/reyohoho_desktop_domains.json"
 
 const config_mirror_url = "https://gitlab.com/-/snippets/4805196/raw/main/snippetfile1.txt"
+
+let main_site_url;
 
 const addVIPButtonScript = `
 if(document.getElementById('vip-buttonContainer')) {
@@ -217,7 +219,7 @@ const addVIPButton = (): void => {
 
 const reload = (): void => {
   if (mainWindow?.webContents.getURL().includes("loader.html")) {
-    mainWindow?.loadURL(appConfig!.main_site_url);
+    mainWindow?.loadURL(main_site_url!);
   } else {
     mainWindow?.reload();
   }
@@ -413,12 +415,50 @@ function loadConfig(config_url: string): void {
     });
 }
 
+function changeWebUrlMirror():void {
+  prompt({
+    title: 'Укажите путь к зеркалу:',
+    useHtmlLabel: true,
+    height: 250,
+    label: `Список зеркал: <a target="_blank" href="https://github.com/reyohoho/reyohoho#mirrors">github</a><br>`,
+    multiInputOptions:
+      [
+        {
+          label: "По умолчанию", value: appConfig!.main_site_url, inputAttrs: {
+            type: "text",
+            required: false,
+          }
+        },
+        {
+          label: "Текущее зеркало", value: store.get('user_mirror', appConfig!.main_site_url) as string, inputAttrs: {
+            type: "text",
+            required: true,
+          }
+        },
+      ],
+    resizable: true,
+    type: 'multiInput'
+  })
+    .then((result: string[] | null) => {
+      if (result === null) {
+        console.log('User cancelled');
+      } else {
+        let user_mirror = result[1];
+        if(!user_mirror.startsWith('http')) {
+          user_mirror = `https://${user_mirror}`;
+        }
+        store.set("user_mirror", user_mirror);
+        main_site_url = user_mirror;
+        mainWindow?.loadURL(user_mirror);
+      }
+    })
+}
+
 async function createWindow(configError: any | ''): Promise<void> {
   if (!mainWindow) {
     mainWindow = new BrowserWindow({
       width: screen.getPrimaryDisplay().workAreaSize.width,
       height: screen.getPrimaryDisplay().workAreaSize.height,
-      autoHideMenuBar: true,
       darkTheme: true,
       backgroundColor: "#000",
       icon: 'icon.png',
@@ -455,11 +495,29 @@ async function createWindow(configError: any | ''): Promise<void> {
     checkUpdates();
   }
 
+  main_site_url = store.get('user_mirror', appConfig!.main_site_url) as string;
+
   mainWindow.once('ready-to-show', () => {
     mainWindow?.maximize();
     mainWindow?.show();
     mainWindow?.focus();
   });
+
+  const menu = Menu.buildFromTemplate([
+    {
+      label: 'Настройки',
+      submenu: [
+        {
+          label: 'Сменить URL зеркала',
+          click: () => {
+            changeWebUrlMirror();
+          }
+        }
+      ]
+    }
+  ]);
+
+  Menu.setApplicationMenu(menu);
 
   mainWindow?.loadFile("loader.html");
 
@@ -503,16 +561,12 @@ async function createWindow(configError: any | ''): Promise<void> {
     mainWindow = null
   })
 
-  mainWindow?.loadURL(appConfig!.main_site_url);
+  mainWindow?.loadURL(main_site_url!);
 
   mainWindow.on('closed', function () {
     mainWindow = null
   })
 }
-
-app.on("browser-window-created", (e, win) => {
-  win.removeMenu();
-});
 
 app.whenReady().then(() => {
   loadConfig(config_main_url);
