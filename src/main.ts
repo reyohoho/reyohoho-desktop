@@ -257,9 +257,10 @@ const openTorrents = (): void => {
       width: 500,
       useHtmlLabel: true,
       label: `Просмотр торрентов без скачки через сервер ReYohoho<br>
-      Пример работы <a target="_blank" href="https://storage.yandexcloud.net/miscrhhhh/2025-02-07%2010-43-11.mp4">видео</a><br>
+      Пример работы<a target="_blank" href="https://storage.yandexcloud.net/miscrhhhh/2025-02-07%2010-43-11.mp4">(видео)</a><br>
       Введите логин и пароль ReYohoho VIP<br>
-      Данные можно получить по подписке на <a target="_blank" href="${appConfig!.boosty_vip_link}">бусти</a>`,
+      Данные можно получить по подписке на <a target="_blank" href="${appConfig!.boosty_vip_link}">бусти</a><br>
+      (По <a target="_blank" href="https://t.me/ReYohoho_support">запросу</a> предоставлю пробный доступ)`,
       multiInputOptions:
         [
           {
