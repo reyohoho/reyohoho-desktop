@@ -364,6 +364,11 @@ function preparePlayer(parameters: string[]): void {
     ]
     initialPath = 'C:\\Program Files\\VideoLAN\\VLC\\vlc.exe';
     hintPath = 'Укажите путь к VLC.exe или к mpc-hc64.exe';
+  } if (process.platform === 'darwin') {
+    initialPath = '/Applications/VLC.app/Contents/MacOS/VLC';
+    store.set('vlc_path', initialPath);
+    runPlayer(parameters);
+    return;
   } else {
     fileFilters = [
       { name: 'All Files', extensions: ['*'] }
