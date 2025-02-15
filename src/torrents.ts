@@ -68,7 +68,11 @@ function changePlayerPath(): void {
   }).then(result => {
     if (!result.canceled && result.filePaths.length > 0) {
       initialPath = result.filePaths[0];
-      store.set('vlc_path', initialPath);
+      if (process.platform === 'darwin') {
+        store.set('vlc_path', `${initialPath}/Contents/MacOS/VLC`);
+      } else {
+        store.set('vlc_path', initialPath);
+      }
     }
   }).catch(err => {
     console.error('Ошибка при выборе файла:', err);
