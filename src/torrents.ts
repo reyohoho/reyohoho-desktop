@@ -365,10 +365,11 @@ function preparePlayer(parameters: string[]): void {
     initialPath = 'C:\\Program Files\\VideoLAN\\VLC\\vlc.exe';
     hintPath = 'Укажите путь к VLC.exe или к mpc-hc64.exe';
   } if (process.platform === 'darwin') {
-    initialPath = '/Applications/VLC.app/Contents/MacOS/VLC';
-    store.set('vlc_path', initialPath);
-    runPlayer(parameters);
-    return;
+    fileFilters = [
+      { name: 'All Files', extensions: ['*'] }
+    ]
+    initialPath = '/Applications/';
+    hintPath = 'Укажите путь к VLC.app';
   } else {
     fileFilters = [
       { name: 'All Files', extensions: ['*'] }
@@ -385,7 +386,11 @@ function preparePlayer(parameters: string[]): void {
   }).then(result => {
     if (!result.canceled && result.filePaths.length > 0) {
       initialPath = result.filePaths[0];
-      store.set('vlc_path', initialPath);
+      if (process.platform === 'darwin') {
+        store.set('vlc_path', `${initialPath}/Contents/MacOS/VLC`);
+      } else {
+        store.set('vlc_path', initialPath);
+      }
       runPlayer(parameters);
     }
   }).catch(err => {
