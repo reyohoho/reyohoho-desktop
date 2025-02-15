@@ -364,7 +364,7 @@ function preparePlayer(parameters: string[]): void {
     ]
     initialPath = 'C:\\Program Files\\VideoLAN\\VLC\\vlc.exe';
     hintPath = 'Укажите путь к VLC.exe или к mpc-hc64.exe';
-  } if (process.platform === 'darwin') {
+  } else if (process.platform === 'darwin') {
     fileFilters = [
       { name: 'All Files', extensions: ['*'] }
     ]
