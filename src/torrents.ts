@@ -107,7 +107,11 @@ export async function createTorrentsWindow(kpTitle: string, config: AppConfig, t
 
   setupButtons(kpTitle);
 
-  mainWindow?.setMenu(menu);
+  if (process.platform !== 'darwin') {
+    mainWindow?.setMenu(menu);
+  } else {
+    Menu.setApplicationMenu(menu);
+  }
 
   setTimeout(() => {
     mainWindow?.loadURL(`${appConfig!.torrent_parser_url}?rand=${Date.now()}`, { "extraHeaders": "pragma: no-cache\n" });

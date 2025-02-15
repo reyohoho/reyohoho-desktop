@@ -432,7 +432,7 @@ function loadConfig(config_url: string): void {
     });
 }
 
-function changeWebUrlMirror():void {
+function changeWebUrlMirror(): void {
   prompt({
     skipTaskbar: false,
     alwaysOnTop: true,
@@ -463,7 +463,7 @@ function changeWebUrlMirror():void {
         console.log('User cancelled');
       } else {
         let user_mirror = result[1];
-        if(!user_mirror.startsWith('http')) {
+        if (!user_mirror.startsWith('http')) {
           user_mirror = `https://${user_mirror}`;
         }
         store.set("user_mirror", user_mirror);
@@ -522,7 +522,11 @@ async function createWindow(configError: any | ''): Promise<void> {
     mainWindow?.focus();
   });
 
-  mainWindow?.setMenu(menu);
+  if (process.platform !== 'darwin') {
+    mainWindow?.setMenu(menu);
+  } else {
+    Menu.setApplicationMenu(menu);
+  }
 
   mainWindow?.loadFile("loader.html");
 
