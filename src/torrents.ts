@@ -46,6 +46,12 @@ function changePlayerPath(): void {
     ]
     initialPath = 'C:\\Program Files\\VideoLAN\\VLC\\vlc.exe';
     hintPath = 'Укажите путь к VLC.exe или к mpc-hc64.exe';
+  } else if (process.platform === 'darwin') {
+    fileFilters = [
+      { name: 'All Files', extensions: ['*'] }
+    ]
+    initialPath = '/Applications/';
+    hintPath = 'Укажите путь к VLC.app';
   } else {
     fileFilters = [
       { name: 'All Files', extensions: ['*'] }
