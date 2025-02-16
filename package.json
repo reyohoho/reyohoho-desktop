@@ -1,6 +1,6 @@
 {
   "name": "ReYohoho",
-  "version": "1.0.26",
+  "version": "1.0.27",
   "main": "dist/main.js",
   "author": "ReYohoho",
   "type": "module",
@@ -45,17 +45,18 @@
     "win": {
       "asar": false,
       "target": "nsis",
-      "icon": "icons/256x256.png"
+      "icon": "icons/256x256.png",
+      "artifactName": "ReYohoho.Setup.${version}.${ext}"
     },
     "mac": {
       "asar": false,
-      "target": [
-        "dmg"
-      ]
+      "target": "dmg",
+      "artifactName": "ReYohoho.Setup.${version}.${ext}"
     },
     "linux": {
       "asar": false,
-      "target": "AppImage"
+      "target": "AppImage",
+      "artifactName": "ReYohoho.Setup.${version}.${ext}"
     },
     "nsis": {
       "deleteAppDataOnUninstall": false,
