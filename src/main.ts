@@ -595,17 +595,18 @@ autoUpdater.on('checking-for-update', () => {
 });
 
 autoUpdater.on('update-available', (info) => {
-  const { dialog } = require('electron');
-  dialog.showMessageBox({
-    type: 'info',
-    title: 'Update Available',
-    message: 'A new version is availanpble. Do you want to update now?',
-    buttons: ['Yes', 'No']
-  }, (buttonIndex: number) => {
-    if (buttonIndex === 0) {
-      autoUpdater.downloadUpdate();
-    }
-  });
+  if (mainWindow != null) {
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: `Доступно обновление`,
+      message: `Обновить сейчас?`,
+      buttons: ['Обновить', 'Позже'],
+    }).then((result) => {
+      if (result.response === 1) {
+        autoUpdater.downloadUpdate();
+      }
+    });
+  }
 });
 
 autoUpdater.on('update-not-available', (info) => {
