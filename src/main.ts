@@ -15,11 +15,11 @@ let mainWindow: BrowserWindow | null = null;
 let appConfig: AppConfig | null = null;
 const store = new Store({});
 
-const isDebug = false;
+const isDebug = !app.isPackaged;
 
-const config_main_url = "https://gist.githubusercontent.com/reyohoho/c4de4c47dd9b2c3d4b2985a74056e55c/raw/reyohoho_desktop_domains.json"
+const config_main_url = `https://gist.githubusercontent.com/reyohoho/c4de4c47dd9b2c3d4b2985a74056e55c/raw/reyohoho_desktop_domains.json?t=${Math.random()}`;
 
-const config_mirror_url = "https://gitlab.com/-/snippets/4805196/raw/main/snippetfile1.txt"
+const config_mirror_url = `https://gitlab.com/-/snippets/4805196/raw/main/snippetfile1.txt?t=${Math.random()}`;
 
 autoUpdater.autoInstallOnAppQuit = true;
 
@@ -34,6 +34,18 @@ const menu = Menu.buildFromTemplate([
         click: () => {
           changeWebUrlMirror();
         }
+      },
+      {
+        label: 'Открыть инструменты разработчика',
+        click: () => {
+          mainWindow?.webContents.openDevTools();
+        }
+      },
+      {
+        label: 'Настройка хоткеев',
+        click: () => {
+          openHotkeysSettings();
+        }
       }
     ]
   }
@@ -43,7 +55,7 @@ const addVIPButtonScript = `
 if(document.getElementById('vip-buttonContainer')) {
   document.getElementById('vip-buttonContainer').remove();
 }
-const buttonContainerVIP = document.createElement('div');
+var buttonContainerVIP = document.createElement('div');
 buttonContainerVIP.id = 'vip-buttonContainer';
 buttonContainerVIP.style.position = 'fixed';
 buttonContainerVIP.style.top = '50px';
@@ -53,7 +65,7 @@ buttonContainerVIP.style.display = 'flex';
 buttonContainerVIP.style.gap = '10px';
 document.body.appendChild(buttonContainerVIP);
 
-const torrentsButton = document.createElement('button');
+var torrentsButton = document.createElement('button');
 torrentsButton.textContent = 'ReYohoho VIP (F1)';
 torrentsButton.style.padding = '10px 20px';
 torrentsButton.style.backgroundColor = 'black';
@@ -67,10 +79,10 @@ buttonContainerVIP.appendChild(torrentsButton);
 `;
 
 const addButtonsScript = `
-let isButtonClicked = false;
-let csource = null;
-let isInit = false;
-let isFlipButtonClicked = false;
+var isButtonClicked = false;
+var csource = null;
+var isInit = false;
+var isFlipButtonClicked = false;
 if(document.getElementById('rh-buttonContainer')) {
   document.getElementById('rh-buttonContainer').remove();
 }
@@ -372,26 +384,47 @@ function loadConfig(config_url: string): void {
     .then(response => response.json() as Promise<AppConfig>)
     .then(data => {
       appConfig = data;
+
       const filter = {
         urls: [appConfig!.alloha_cdn_filter_url, appConfig!.lumex_cdn_filter_url]
       };
 
       session.defaultSession.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
-        if (details.requestHeaders['Referer'].includes(appConfig!.alloha_referer)) {
-          details.requestHeaders['Origin'] = appConfig!.alloha_origin_url;
+        try {
+          if (!details.requestHeaders['Referer']) return;
+          if (details.requestHeaders['Referer'].includes(appConfig!.alloha_referer)) {
+            details.requestHeaders['Origin'] = appConfig!.alloha_origin_url;
+          }
+          if (details.requestHeaders['Referer'].includes(appConfig!.lumex_referer)) {
+            details.requestHeaders['Origin'] = appConfig!.lumex_origin_url;
+          }
+          callback({ requestHeaders: details.requestHeaders });
+        } catch (e) {
+          console.error('Error in onBeforeSendHeaders:', e);
         }
-        if (details.requestHeaders['Referer'].includes(appConfig!.lumex_referer)) {
-          details.requestHeaders['Origin'] = appConfig!.lumex_origin_url;
-        }
-        callback({ requestHeaders: details.requestHeaders });
       });
 
-      createWindow('');
+      createWindow('132');
     })
     .catch(error => {
       console.error('Error load config:', error);
       createWindow(error);
     });
+}
+
+function openHotkeysSettings(): void {
+  if (mainWindow != null) {
+    dialog.showMessageBox(mainWindow, {
+      noLink: true,
+      title: `Настройка хоткеев`,
+      checkboxLabel: `Перехватывать`,
+      checkboxChecked: store.get('blur_hotkey_is_global', true) as boolean,
+      message: `Перехватывать глобально кнопку F2? (для работы блюра, когда приложение не в фокусе)`,
+      buttons: ['Сохранить'],
+    }).then((result) => {
+      store.set('blur_hotkey_is_global', result['checkboxChecked']);
+    });
+  }
 }
 
 function changeWebUrlMirror(): void {
@@ -452,13 +485,10 @@ async function createWindow(configError: any | ''): Promise<void> {
     });
   }
 
-  if (isDebug) {
-    mainWindow.webContents.openDevTools();
-  }
-
   if (!appConfig) {
     if (mainWindow != null) {
       dialog.showMessageBox(mainWindow, {
+        noLink: true,
         type: 'error',
         title: `Произошла ошибка при загрузке конфига`,
         message: `${configError}`,
@@ -480,6 +510,9 @@ async function createWindow(configError: any | ''): Promise<void> {
     mainWindow?.maximize();
     mainWindow?.show();
     mainWindow?.focus();
+    if (isDebug) {
+      mainWindow?.webContents.openDevTools();
+    }
   });
 
   if (process.platform !== 'darwin') {
@@ -503,6 +536,7 @@ async function createWindow(configError: any | ''): Promise<void> {
     console.log(e);
     if (mainWindow != null) {
       dialog.showMessageBox(mainWindow, {
+        noLink: true,
         type: 'error',
         title: `Произошла ошибка при загрузке AdBlock`,
         message: `${e}`
@@ -577,14 +611,21 @@ app.on('browser-window-focus', () => {
   globalShortcut.register('F3', switchCompressor);
   globalShortcut.register('F4', switchMirror);
   globalShortcut.register('F5', reload);
+  globalShortcut.register('F11', () => {
+    mainWindow?.webContents.toggleDevTools();
+  });
   globalShortcut.register('CommandOrControl+R', reload);
 })
 
 app.on('browser-window-blur', () => {
   globalShortcut.unregister('F1');
+  if (!store.get('blur_hotkey_is_global', true) as boolean) {
+    globalShortcut.unregister('F2');
+  }
   globalShortcut.unregister('F3');
   globalShortcut.unregister('F4');
   globalShortcut.unregister('F5');
+  globalShortcut.unregister('F11');
   globalShortcut.unregister('CommandOrControl+R');
 })
 
@@ -615,6 +656,7 @@ autoUpdater.on('update-downloaded', (info) => {
   console.log('Update downloaded.', info);
   if (mainWindow != null) {
     dialog.showMessageBox(mainWindow, {
+      noLink: true,
       type: 'info',
       title: `Обновление загружено`,
       message: `Установить сейчас?`,
