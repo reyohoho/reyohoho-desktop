@@ -21,6 +21,8 @@ const config_main_url = "https://gist.githubusercontent.com/reyohoho/c4de4c47dd9
 
 const config_mirror_url = "https://gitlab.com/-/snippets/4805196/raw/main/snippetfile1.txt"
 
+autoUpdater.autoInstallOnAppQuit = true;
+
 let main_site_url;
 
 const menu = Menu.buildFromTemplate([
@@ -594,21 +596,6 @@ autoUpdater.on('checking-for-update', () => {
   console.log('Checking for update...');
 });
 
-autoUpdater.on('update-available', (info) => {
-  if (mainWindow != null) {
-    dialog.showMessageBox(mainWindow, {
-      type: 'info',
-      title: `Доступно обновление`,
-      message: `Обновить сейчас?`,
-      buttons: ['Обновить', 'Позже'],
-    }).then((result) => {
-      if (result.response === 1) {
-        autoUpdater.downloadUpdate();
-      }
-    });
-  }
-});
-
 autoUpdater.on('update-not-available', (info) => {
   console.log('Update not available.', info);
 });
@@ -626,5 +613,16 @@ autoUpdater.on('download-progress', (progressObj) => {
 
 autoUpdater.on('update-downloaded', (info) => {
   console.log('Update downloaded.', info);
-  autoUpdater.quitAndInstall(); // Перезапуск приложения и установка обновления
+  if (mainWindow != null) {
+    dialog.showMessageBox(mainWindow, {
+      type: 'info',
+      title: `Обновление загружено`,
+      message: `Установить сейчас?`,
+      buttons: ['Позже', 'Установить'],
+    }).then((result) => {
+      if (result.response === 1) {
+        autoUpdater.quitAndInstall();
+      }
+    });
+  }
 });
