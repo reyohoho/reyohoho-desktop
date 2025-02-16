@@ -4,10 +4,13 @@ import { app, BrowserWindow, dialog, session, globalShortcut, shell, screen, Men
 import { createTorrentsWindow } from './torrents.js'
 import prompt from 'custom-electron-prompt';
 import Store from 'electron-store';
+import pkg from 'electron-updater';
+const { autoUpdater } = pkg;
 
 const APP_NAME = `ReYohoho Desktop ${app.getVersion()}`;
 
 app.commandLine.appendSwitch('disable-site-isolation-trials');
+
 let mainWindow: BrowserWindow | null = null;
 let appConfig: AppConfig | null = null;
 const store = new Store({});
@@ -346,49 +349,6 @@ if (!AbortSignal.timeout) {
   };
 }
 
-interface UpdateInfo {
-  version: string;
-  changelog: string;
-  download_link: string;
-}
-
-interface AppVersionResponse {
-  "reyohoho-desktop": UpdateInfo;
-}
-
-function checkUpdates(): void {
-  fetch(appConfig!.app_version_url, { signal: AbortSignal.timeout(5000) })
-    .then(response => response.json() as Promise<AppVersionResponse>)
-    .then(data => {
-      const update_info = data["reyohoho-desktop"];
-      if (update_info.version === app.getVersion()) {
-        return;
-      }
-      if (mainWindow != null) {
-        dialog.showMessageBox(mainWindow, {
-          type: 'info',
-          title: `Доступно обновление ${update_info.version}!`,
-          message: update_info.changelog,
-          buttons: ['Позже', 'Обновить'],
-        }).then((result) => {
-          if (result.response === 1) {
-            shell.openExternal(update_info.download_link);
-          }
-        });
-      }
-    })
-    .catch(error => {
-      console.error('Error check updates:', error);
-      if (mainWindow != null) {
-        dialog.showMessageBox(mainWindow, {
-          type: 'error',
-          title: `Произошла ошибка при проверке обновлений`,
-          message: `${error}`
-        })
-      }
-    });
-}
-
 export interface AppConfig {
   ad_block_url: string,
   main_site_url: string,
@@ -510,8 +470,6 @@ async function createWindow(configError: any | ''): Promise<void> {
       });
     }
     return;
-  } else {
-    checkUpdates();
   }
 
   main_site_url = store.get('user_mirror', appConfig!.main_site_url) as string;
@@ -531,6 +489,7 @@ async function createWindow(configError: any | ''): Promise<void> {
   mainWindow?.loadFile("loader.html");
 
   mainWindow.setTitle(APP_NAME + ' Loading ....');
+  autoUpdater.checkForUpdatesAndNotify();
 
   let blocker = null;
 
@@ -629,4 +588,42 @@ app.on('browser-window-blur', () => {
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit();
+});
+
+autoUpdater.on('checking-for-update', () => {
+  console.log('Checking for update...');
+});
+
+autoUpdater.on('update-available', (info) => {
+  const { dialog } = require('electron');
+  dialog.showMessageBox({
+    type: 'info',
+    title: 'Update Available',
+    message: 'A new version is availanpble. Do you want to update now?',
+    buttons: ['Yes', 'No']
+  }, (buttonIndex: number) => {
+    if (buttonIndex === 0) {
+      autoUpdater.downloadUpdate();
+    }
+  });
+});
+
+autoUpdater.on('update-not-available', (info) => {
+  console.log('Update not available.', info);
+});
+
+autoUpdater.on('error', (err) => {
+  console.log('Error in auto-updater.', err);
+});
+
+autoUpdater.on('download-progress', (progressObj) => {
+  let log_message = 'Download speed: ' + progressObj.bytesPerSecond;
+  log_message = log_message + ' - Downloaded ' + progressObj.percent + '%';
+  log_message = log_message + ' (' + progressObj.transferred + '/' + progressObj.total + ')';
+  console.log(log_message);
+});
+
+autoUpdater.on('update-downloaded', (info) => {
+  console.log('Update downloaded.', info);
+  autoUpdater.quitAndInstall(); // Перезапуск приложения и установка обновления
 });

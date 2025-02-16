@@ -1,6 +1,6 @@
 {
   "name": "ReYohoho",
-  "version": "1.0.23",
+  "version": "1.0.24",
   "main": "dist/main.js",
   "author": "ReYohoho",
   "type": "module",
@@ -19,7 +19,8 @@
     "@ghostery/adblocker-electron": "^2.5.0",
     "cross-fetch": "^4.1.0",
     "custom-electron-prompt": "^1.5.8",
-    "electron-store": "^10.0.1"
+    "electron-store": "^10.0.1",
+    "electron-updater": "^6.3.9"
   },
   "scripts": {
     "build": "tsc",
@@ -29,6 +30,11 @@
     "build:linux": "rm -rf ./dist && npm run build && electron-builder --linux --publish=never"
   },
   "build": {
+    "publish": {
+      "provider": "github",
+      "owner": "reyohoho",
+      "repo": "reyohoho-desktop"
+    },
     "productName": "ReYohoho",
     "appId": "ru.reyohoho",
     "files": [
