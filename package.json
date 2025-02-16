@@ -1,6 +1,6 @@
 {
   "name": "ReYohoho",
-  "version": "1.0.27",
+  "version": "1.0.28",
   "main": "dist/main.js",
   "author": "ReYohoho",
   "type": "module",
@@ -19,7 +19,8 @@
     "@ghostery/adblocker-electron": "^2.5.0",
     "cross-fetch": "^4.1.0",
     "custom-electron-prompt": "^1.5.8",
-    "electron-updater": "^6.3.9"
+    "electron-updater": "^6.3.9",
+    "electron-store": "^10.0.1"
   },
   "scripts": {
     "build": "tsc",
