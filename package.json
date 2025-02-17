@@ -1,6 +1,6 @@
 {
   "name": "ReYohoho",
-  "version": "1.0.34",
+  "version": "1.0.35",
   "main": "dist/main.js",
   "author": "ReYohoho",
   "type": "module",
@@ -50,7 +50,7 @@
     },
     "mac": {
       "asar": false,
-      "target": "dmg",
+      "target": "default",
       "artifactName": "ReYohoho.Setup.${version}_${arch}.${ext}"
     },
     "linux": {
