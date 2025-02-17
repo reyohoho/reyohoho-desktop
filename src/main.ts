@@ -22,6 +22,9 @@ const config_main_url = `https://gist.githubusercontent.com/reyohoho/c4de4c47dd9
 const config_mirror_url = `https://gitlab.com/-/snippets/4805196/raw/main/snippetfile1.txt?t=${Math.random()}`;
 
 autoUpdater.autoInstallOnAppQuit = true;
+if (process.platform === 'darwin') {
+  autoUpdater.autoDownload = false;
+}
 
 let main_site_url;
 
@@ -655,6 +658,22 @@ autoUpdater.on('checking-for-update', () => {
 autoUpdater.on('update-not-available', (info) => {
   console.log('Update not available.', info);
 });
+
+autoUpdater.on('update-available', () => {
+  if (mainWindow != null) {
+    dialog.showMessageBox(mainWindow, {
+      noLink: true,
+      type: 'info',
+      title: `Доступно обновление`,
+      message: `Перейти на страницу загрузок?`,
+      buttons: ['Позже', 'Перейти'],
+    }).then((result) => {
+      if (result.response === 1) {
+        shell.openExternal('https://github.com/reyohoho/reyohoho-desktop/releases');
+      }
+    });
+  }
+})
 
 autoUpdater.on('error', (err) => {
   console.log('Error in auto-updater.', err);
