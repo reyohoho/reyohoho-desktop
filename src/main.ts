@@ -498,7 +498,7 @@ async function createWindow(configError: any | ''): Promise<void> {
       webPreferences: {
         contextIsolation: false,
         webSecurity: false,
-        devTools: isDebug,
+        devTools: true,
       }
     });
   }
