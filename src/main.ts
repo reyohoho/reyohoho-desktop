@@ -660,7 +660,7 @@ autoUpdater.on('update-not-available', (info) => {
 });
 
 autoUpdater.on('update-available', () => {
-  if (mainWindow != null) {
+  if (mainWindow != null && process.platform === 'darwin') {
     dialog.showMessageBox(mainWindow, {
       noLink: true,
       type: 'info',
