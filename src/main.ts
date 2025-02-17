@@ -263,7 +263,14 @@ const openTorrents = (): void => {
     const base64Credentials = Buffer.from(credentials).toString("base64");
     mainWindow?.webContents.executeJavaScript('document.querySelector("#kp-title").innerText')
       .then(result => {
-        createTorrentsWindow(result.replace(/\s*\(.*\)$/, ""), appConfig!, base64Credentials);
+        const match = result.match(/^(.*?)\s*\((\d{4})\)$/);
+        if (match) {
+          const title = match[1].trim();
+          const year = match[2];
+          createTorrentsWindow(title, year, appConfig!, base64Credentials);
+        } else {
+          createTorrentsWindow(result.replace(/\s*\(.*\)$/, ""), null, appConfig!, base64Credentials);
+        }
       })
   } else {
     prompt({
@@ -309,7 +316,14 @@ const openTorrents = (): void => {
           isNewCredsStored = true;
           mainWindow?.webContents.executeJavaScript('document.querySelector("#kp-title").innerText')
             .then(result => {
-              createTorrentsWindow(result.replace(/\s*\(.*\)$/, ""), appConfig!, base64Credentials);
+              const match = result.match(/^(.*?)\s*\((\d{4})\)$/);
+              if (match) {
+                const title = match[1].trim();
+                const year = match[2];
+                createTorrentsWindow(title, year, appConfig!, base64Credentials);
+              } else {
+                createTorrentsWindow(result.replace(/\s*\(.*\)$/, ""), null, appConfig!, base64Credentials);
+              }
             })
         }
       })

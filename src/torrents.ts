@@ -80,7 +80,7 @@ function changePlayerPath(): void {
   });
 }
 
-export async function createTorrentsWindow(kpTitle: string, config: AppConfig, token: string): Promise<void> {
+export async function createTorrentsWindow(kpTitle: string, year: string | null, config: AppConfig, token: string): Promise<void> {
   appConfig = config;
   userToken = token;
 
@@ -116,7 +116,7 @@ export async function createTorrentsWindow(kpTitle: string, config: AppConfig, t
     mainWindow?.setTitle(APP_NAME);
   });
 
-  setupButtons(kpTitle);
+  setupButtons(kpTitle, year);
 
   if (process.platform !== 'darwin') {
     mainWindow?.setMenu(menu);
@@ -244,7 +244,7 @@ function handleMagnet(url: string, base64Credentials: string): void {
     });
 }
 
-function setupButtons(kpTitle: string): void {
+function setupButtons(kpTitle: string, year: string | null): void {
   mainWindow?.webContents.on('will-navigate', (event, url) => {
     if (url.startsWith('magnet:')) {
       event.preventDefault();
@@ -257,6 +257,22 @@ function setupButtons(kpTitle: string): void {
       document.querySelector('#exactSearch').checked=true;
       window.localStorage.setItem('exact', 1);
       document.querySelector('#submitButton').click();
+      if(${year}) {
+              function waitYear() {
+                const selectElement = document.querySelector('select[name="year"]');
+                if (selectElement) {
+                  const option = selectElement.querySelector('option[value="${year}"]');
+                  if (option) {
+                    selectElement.value = '${year}';
+                    const event = new Event('change', { bubbles: true });
+                    selectElement.dispatchEvent(event);
+                    clearInterval(intervalId);
+                  }
+                }
+            }
+
+            var intervalId = setInterval(waitYear, 500);
+        }
     `;
 
     mainWindow?.webContents.executeJavaScript(searchTorrents);
