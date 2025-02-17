@@ -390,7 +390,8 @@ export interface AppConfig {
   lumex_referer: string,
   lumex_cdn_filter_url: string,
   url_handler_deny: string,
-  boosty_vip_link: string
+  boosty_vip_link: string,
+  torr_server_urls: string[],
 }
 
 function loadConfig(config_url: string): void {

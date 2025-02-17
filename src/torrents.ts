@@ -13,6 +13,8 @@ let mainWindow: BrowserWindow | null = null;
 let appConfig: AppConfig | null = null;
 const store = new Store({});
 let userToken: string | null = null;
+let selectedTorrServerUrl: string | null = null;
+
 const menu = Menu.buildFromTemplate([
   {
     label: 'Настройки',
@@ -82,6 +84,7 @@ function changePlayerPath(): void {
 
 export async function createTorrentsWindow(kpTitle: string, year: string | null, config: AppConfig, token: string): Promise<void> {
   appConfig = config;
+  selectedTorrServerUrl = config.torr_server_urls[0];
   userToken = token;
 
   mainWindow = new BrowserWindow({
@@ -174,7 +177,7 @@ async function fetchWithRetry(
 }
 
 function handleMagnet(url: string, base64Credentials: string): void {
-  const apiUrl = `${appConfig!.torr_server_url}torrents`;
+  const apiUrl = `${selectedTorrServerUrl}torrents`;
   const raw = JSON.stringify({
     "action": "add",
     "link": url
@@ -223,7 +226,7 @@ function handleMagnet(url: string, base64Credentials: string): void {
             return;
           }
           if (data["file_stats"].length === 1) {
-            const playUrl = encodeURI(`${appConfig!.torr_server_url}play/${hash}/1`);
+            const playUrl = encodeURI(`${selectedTorrServerUrl}play/${hash}/1`);
             console.log(`Final url: ${playUrl}`);
             mainWindow?.setTitle(APP_NAME + ' Успешно получена ссылка на стрим...');
             preparePlayer([playUrl]);
@@ -248,9 +251,34 @@ function setupButtons(kpTitle: string, year: string | null): void {
   mainWindow?.webContents.on('will-navigate', (event, url) => {
     if (url.startsWith('magnet:')) {
       event.preventDefault();
-      handleMagnet(url, userToken!);
+
+      const servers: Record<number, string> = {};
+
+      for (const [index, value] of appConfig!.torr_server_urls.entries()) {
+        servers[index] = value;
+      }
+      prompt({
+        skipTaskbar: false,
+        alwaysOnTop: true,
+        title: 'Выберите сервер',
+        label: 'Выберите сервер:',
+        type: 'select',
+        resizable: true,
+        width: 1000,
+        selectOptions: servers
+      })
+        .then((result: string | null) => {
+          if (result === null) {
+            console.log('User cancelled');
+            mainWindow?.setTitle(APP_NAME);
+          } else {
+            selectedTorrServerUrl = servers[Number(result)];
+            handleMagnet(url, userToken!);
+          }
+        })
     }
   });
+
   mainWindow?.webContents.on('did-finish-load', () => {
     const searchTorrents = `
       document.getElementById('s').value = "${kpTitle}";
@@ -317,7 +345,7 @@ async function showTorrentFilesSelectorDialog(hash: string, files: { id: number;
         console.log(result);
         const id = records[Number(result)].split('=').reverse()[0];
         console.log(id);
-        const playUrl = encodeURI(`${appConfig!.torr_server_url}play/${hash}/${id}`);
+        const playUrl = encodeURI(`${selectedTorrServerUrl}play/${hash}/${id}`);
         console.log(`Final url: ${playUrl}`);
         mainWindow?.setTitle(APP_NAME + ' Успешно получена ссылка на стрим...');
         preparePlayer([playUrl]);
