@@ -95,6 +95,7 @@ export async function createTorrentsWindow(kpTitle: string, config: AppConfig, t
       contextIsolation: false,
       webSecurity: false,
       devTools: false,
+      partition: 'temp'
     }
   });
   mainWindow.once('ready-to-show', () => {
@@ -124,6 +125,11 @@ export async function createTorrentsWindow(kpTitle: string, config: AppConfig, t
   }
 
   setTimeout(() => {
+    const session = mainWindow?.webContents.session;
+    session?.clearCache();
+    session?.clearStorageData({
+      storages: ['localstorage']
+    });
     mainWindow?.loadURL(`${appConfig!.torrent_parser_url}?rand=${Date.now()}`, { "extraHeaders": "pragma: no-cache\n" });
   }, 1000);
 
@@ -247,12 +253,10 @@ function setupButtons(kpTitle: string): void {
   });
   mainWindow?.webContents.on('did-finish-load', () => {
     const searchTorrents = `
-      document.getElementById('s').value = "${kpTitle}"
-      document.querySelector('#exactSearch').checked=true
-      window.localStorage.setItem('exact', 1)
-      document.querySelector('#submitButton').click()
-      document.querySelector('#submitButton').click()
-      document.querySelector('#submitButton').click()
+      document.getElementById('s').value = "${kpTitle}";
+      document.querySelector('#exactSearch').checked=true;
+      window.localStorage.setItem('exact', 1);
+      document.querySelector('#submitButton').click();
     `;
 
     mainWindow?.webContents.executeJavaScript(searchTorrents);
