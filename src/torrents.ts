@@ -1,10 +1,15 @@
 import fetch from 'cross-fetch';
-import { app, BrowserWindow, dialog, shell, screen, Menu } from 'electron';
+import { app, BrowserWindow, dialog, shell, screen, Menu, globalShortcut } from 'electron';
 import { spawn, ChildProcess } from 'child_process';
 import fs from 'fs';
 import prompt from 'custom-electron-prompt';
 import Store from 'electron-store';
 import { AppConfig } from './main.js'
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const APP_NAME = `ReYohoho Torrents ${app.getVersion()}`;
 
@@ -381,29 +386,69 @@ const removeCommonPrefixFromPaths = (fileStats: { id: number; path: string; leng
 
 function runPlayer(parameters: string[]) {
   let playerPath = store.get('vlc_path', '') as string;
-  const playerProcess: ChildProcess = spawn(playerPath, parameters);
-  playerProcess.stdout?.on('data', (data: Buffer) => {
-    console.log(`player stdout: ${data.toString()}`);
-  });
+  if (process.platform === 'win32') {
+    dialog.showMessageBox(mainWindow!, {
+      noLink: true,
+      title: `Выберите плеер`,
+      message: `Выберите плеер: внутренний(mpv) или внешний (${playerPath})`,
+      buttons: ['Внутренний(mpv)', 'Внешний'],
+    }).then((result) => {
+      if (result.response === 0) {
+        playerPath = `${__dirname}\\prebuilts\\windows\\player\\mpv.exe`;
+      } else if (result.response === 1) {
+        playerPath = store.get('vlc_path', '') as string;
+      }
+      globalShortcut.unregister('F2');
+      const playerProcess: ChildProcess = spawn(playerPath, parameters);
+      playerProcess.stdout?.on('data', (data: Buffer) => {
+        console.log(`player stdout: ${data.toString()}`);
+      });
 
-  playerProcess.stderr?.on('data', (data: Buffer) => {
-    console.error(`player stderr: ${data.toString()}`);
-    mainWindow?.setTitle(APP_NAME + ` player stderr: ${data.toString()}`);
-  });
+      playerProcess.stderr?.on('data', (data: Buffer) => {
+        console.error(`player stderr: ${data.toString()}`);
+        mainWindow?.setTitle(APP_NAME + ` player stderr: ${data.toString()}`);
+      });
 
-  playerProcess.on('close', (code: number | null) => {
-    if (code === 0) {
-      console.log('player process exited successfully.');
-    } else {
-      console.error(`player process exited with code ${code}`);
-      mainWindow?.setTitle(APP_NAME + ` player process exited with code: ${code}`);
-    }
-  });
+      playerProcess.on('close', (code: number | null) => {
+        if (code === 0) {
+          console.log('player process exited successfully.');
+        } else {
+          console.error(`player process exited with code ${code}`);
+          mainWindow?.setTitle(APP_NAME + ` player process exited with code: ${code}`);
+        }
+      });
 
-  playerProcess.on('error', (err: Error) => {
-    console.error(`Failed to start player: ${err.message}`);
-    mainWindow?.setTitle(APP_NAME + ` Failed to start player: ${err.message}`);
-  });
+      playerProcess.on('error', (err: Error) => {
+        console.error(`Failed to start player: ${err.message}`);
+        mainWindow?.setTitle(APP_NAME + ` Failed to start player: ${err.message}`);
+      });
+    });
+  } else {
+    globalShortcut.unregister('F2');
+    const playerProcess: ChildProcess = spawn(playerPath, parameters);
+    playerProcess.stdout?.on('data', (data: Buffer) => {
+      console.log(`player stdout: ${data.toString()}`);
+    });
+
+    playerProcess.stderr?.on('data', (data: Buffer) => {
+      console.error(`player stderr: ${data.toString()}`);
+      mainWindow?.setTitle(APP_NAME + ` player stderr: ${data.toString()}`);
+    });
+
+    playerProcess.on('close', (code: number | null) => {
+      if (code === 0) {
+        console.log('player process exited successfully.');
+      } else {
+        console.error(`player process exited with code ${code}`);
+        mainWindow?.setTitle(APP_NAME + ` player process exited with code: ${code}`);
+      }
+    });
+
+    playerProcess.on('error', (err: Error) => {
+      console.error(`Failed to start player: ${err.message}`);
+      mainWindow?.setTitle(APP_NAME + ` Failed to start player: ${err.message}`);
+    });
+  }
 }
 
 function preparePlayer(parameters: string[]): void {

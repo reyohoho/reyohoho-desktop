@@ -259,6 +259,25 @@ const reload = (): void => {
   }
 };
 
+const showUpdateAvailableDialog = (): void => {
+  if (mainWindow != null) {
+    dialog.showMessageBox(mainWindow, {
+      noLink: true,
+      type: 'info',
+      title: `Обновление загружено`,
+      message: `Установить сейчас? Иначе оно автоустановится после закрытия приложения`,
+      buttons: ['Позже', 'Установить', 'Список изменений'],
+    }).then((result) => {
+      if (result.response === 1) {
+        autoUpdater.quitAndInstall();
+      } else if (result.response === 2) {
+        shell.openExternal('https://github.com/reyohoho/reyohoho-desktop/releases');
+        showUpdateAvailableDialog();
+      }
+    });
+  }
+}
+
 let isNewCredsStored = false;
 const openTorrents = (): void => {
   if (isNewCredsStored) {
@@ -445,6 +464,18 @@ function openHotkeysSettings(): void {
   }
 }
 
+function registerHotkeys(): void {
+  globalShortcut.register('F1', openTorrents);
+  globalShortcut.register('F2', switchBlurVideo);
+  globalShortcut.register('F3', switchCompressor);
+  globalShortcut.register('F4', switchMirror);
+  globalShortcut.register('F5', reload);
+  globalShortcut.register('F11', () => {
+    mainWindow?.webContents.toggleDevTools();
+  });
+  globalShortcut.register('CommandOrControl+R', reload);
+}
+
 function changeWebUrlMirror(): void {
   prompt({
     skipTaskbar: false,
@@ -585,13 +616,15 @@ async function createWindow(configError: any | ''): Promise<void> {
 
   mainWindow?.loadURL(main_site_url!);
 
-  mainWindow.on('closed', function () {
-    mainWindow = null
+  mainWindow.on('focus', function () {
+    registerHotkeys();
   })
+
 }
 
 app.whenReady().then(() => {
   loadConfig(config_main_url);
+  registerHotkeys();
 });
 
 app.on('web-contents-created', (e, wc) => {
@@ -621,18 +654,6 @@ app.on('web-contents-created', (e, wc) => {
 
 app.on('will-quit', () => {
   globalShortcut.unregisterAll()
-})
-
-app.on('browser-window-focus', () => {
-  globalShortcut.register('F1', openTorrents);
-  globalShortcut.register('F2', switchBlurVideo);
-  globalShortcut.register('F3', switchCompressor);
-  globalShortcut.register('F4', switchMirror);
-  globalShortcut.register('F5', reload);
-  globalShortcut.register('F11', () => {
-    mainWindow?.webContents.toggleDevTools();
-  });
-  globalShortcut.register('CommandOrControl+R', reload);
 })
 
 app.on('browser-window-blur', () => {
@@ -688,17 +709,5 @@ autoUpdater.on('download-progress', (progressObj) => {
 
 autoUpdater.on('update-downloaded', (info) => {
   console.log('Update downloaded.', info);
-  if (mainWindow != null) {
-    dialog.showMessageBox(mainWindow, {
-      noLink: true,
-      type: 'info',
-      title: `Обновление загружено`,
-      message: `Установить сейчас?`,
-      buttons: ['Позже', 'Установить'],
-    }).then((result) => {
-      if (result.response === 1) {
-        autoUpdater.quitAndInstall();
-      }
-    });
-  }
+  showUpdateAvailableDialog();
 });

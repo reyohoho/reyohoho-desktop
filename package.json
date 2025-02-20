@@ -1,6 +1,6 @@
 {
   "name": "ReYohoho",
-  "version": "1.0.38",
+  "version": "1.0.40",
   "main": "dist/main.js",
   "author": "ReYohoho",
   "type": "module",
@@ -46,7 +46,13 @@
       "asar": false,
       "target": "nsis",
       "icon": "icons/256x256.png",
-      "artifactName": "ReYohoho.Setup.${version}_${arch}.${ext}"
+      "artifactName": "ReYohoho.Setup.${version}_${arch}.${ext}",
+      "extraFiles": [
+        {
+          "from": "prebuilts/windows/player",
+          "to": "resources/app/dist/prebuilts/windows/player"
+        }
+      ]
     },
     "mac": {
       "asar": false,
