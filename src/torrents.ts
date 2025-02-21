@@ -1,5 +1,5 @@
 import fetch from 'cross-fetch';
-import { app, BrowserWindow, dialog, shell, screen, Menu, globalShortcut } from 'electron';
+import { app, BrowserWindow, dialog, shell, screen, Menu, globalShortcut, clipboard } from 'electron';
 import { spawn, ChildProcess } from 'child_process';
 import fs from 'fs';
 import prompt from 'custom-electron-prompt';
@@ -234,9 +234,9 @@ function handleMagnet(url: string, base64Credentials: string): void {
             const playUrl = encodeURI(`${selectedTorrServerUrl}play/${hash}/1`);
             console.log(`Final url: ${playUrl}`);
             mainWindow?.setTitle(APP_NAME + ' Успешно получена ссылка на стрим...');
-            preparePlayer([playUrl]);
+            preparePlayer([playUrl], url);
           } else {
-            showTorrentFilesSelectorDialog(hash, data["file_stats"]);
+            showTorrentFilesSelectorDialog(hash, data["file_stats"], url);
           }
 
         })
@@ -325,12 +325,20 @@ app.on('web-contents-created', (e, wc) => {
   });
 });
 
-async function showTorrentFilesSelectorDialog(hash: string, files: { id: number; path: string; length: number }[]) {
-  const records: Record<number, string> = {};
+const videoExtensions = [".webm", ".mkv", ".flv", ".vob", ".ogv", ".ogg", ".rrc", ".gifv",
+  ".mng", ".mov", ".avi", ".qt", ".wmv", ".yuv", ".rm", ".asf", ".amv", ".mp4", ".m4p", ".m4v",
+  ".mpg", ".mp2", ".mpeg", ".mpe", ".mpv", ".m4v", ".svi", ".3gp", ".3g2", ".mxf", ".roq", ".nsv",
+  ".flv", ".f4v", ".f4p", ".f4a", ".f4b", ".mod"];
 
-  for (const [index, value] of files.filter((file) => !file.path.endsWith('.srt')).entries()) {
+async function showTorrentFilesSelectorDialog(hash: string, files: { id: number; path: string; length: number }[], magnet: string) {
+  const records: Record<number, string> = {};
+  for (const [index, value] of files.filter((file) => {
+    const isVideoFile = videoExtensions.some(ext => file.path.endsWith(ext));
+    return isVideoFile;
+  }).entries()) {
     records[index] = value.path + '?id=' + value.id;
   }
+
   console.log(records);
   prompt({
     skipTaskbar: false,
@@ -353,7 +361,7 @@ async function showTorrentFilesSelectorDialog(hash: string, files: { id: number;
         const playUrl = encodeURI(`${selectedTorrServerUrl}play/${hash}/${id}`);
         console.log(`Final url: ${playUrl}`);
         mainWindow?.setTitle(APP_NAME + ' Успешно получена ссылка на стрим...');
-        preparePlayer([playUrl]);
+        preparePlayer([playUrl], magnet);
       }
     })
 }
@@ -384,19 +392,25 @@ const removeCommonPrefixFromPaths = (fileStats: { id: number; path: string; leng
   });
 };
 
-function runPlayer(parameters: string[]) {
+function runPlayer(parameters: string[], magnet: string) {
   let playerPath = store.get('vlc_path', '') as string;
   if (process.platform === 'win32') {
     dialog.showMessageBox(mainWindow!, {
       noLink: true,
       title: `Выберите плеер`,
       message: `Выберите плеер: внутренний(mpv) или внешний (${playerPath})`,
-      buttons: ['Внутренний(mpv)', 'Внешний'],
+      buttons: ['Внутренний(mpv)', 'Внешний', 'Скопировать ссылку на стрим', 'Скопировать magnet'],
     }).then((result) => {
       if (result.response === 0) {
         playerPath = `${__dirname}\\prebuilts\\windows\\player\\mpv.exe`;
       } else if (result.response === 1) {
         playerPath = store.get('vlc_path', '') as string;
+      } else if (result.response === 2) {
+        clipboard.writeText(parameters.join())
+        return;
+      } else if (result.response === 3) {
+        clipboard.writeText(magnet)
+        return;
       }
       globalShortcut.unregister('F2');
       const playerProcess: ChildProcess = spawn(playerPath, parameters);
@@ -424,38 +438,54 @@ function runPlayer(parameters: string[]) {
       });
     });
   } else {
-    globalShortcut.unregister('F2');
-    const playerProcess: ChildProcess = spawn(playerPath, parameters);
-    playerProcess.stdout?.on('data', (data: Buffer) => {
-      console.log(`player stdout: ${data.toString()}`);
-    });
-
-    playerProcess.stderr?.on('data', (data: Buffer) => {
-      console.error(`player stderr: ${data.toString()}`);
-      mainWindow?.setTitle(APP_NAME + ` player stderr: ${data.toString()}`);
-    });
-
-    playerProcess.on('close', (code: number | null) => {
-      if (code === 0) {
-        console.log('player process exited successfully.');
-      } else {
-        console.error(`player process exited with code ${code}`);
-        mainWindow?.setTitle(APP_NAME + ` player process exited with code: ${code}`);
+    dialog.showMessageBox(mainWindow!, {
+      noLink: true,
+      title: `Выберите действие`,
+      message: ``,
+      buttons: ['Открыть плеер', 'Скопировать ссылку на стрим', 'Скопировать magnet'],
+    }).then((result) => {
+      if (result.response === 0) {
+        playerPath = store.get('vlc_path', '') as string;
+      } else if (result.response === 1) {
+        clipboard.writeText(parameters.join())
+        return;
+      } else if (result.response === 2) {
+        clipboard.writeText(magnet)
+        return;
       }
-    });
+      globalShortcut.unregister('F2');
+      const playerProcess: ChildProcess = spawn(playerPath, parameters);
+      playerProcess.stdout?.on('data', (data: Buffer) => {
+        console.log(`player stdout: ${data.toString()}`);
+      });
 
-    playerProcess.on('error', (err: Error) => {
-      console.error(`Failed to start player: ${err.message}`);
-      mainWindow?.setTitle(APP_NAME + ` Failed to start player: ${err.message}`);
+      playerProcess.stderr?.on('data', (data: Buffer) => {
+        console.error(`player stderr: ${data.toString()}`);
+        mainWindow?.setTitle(APP_NAME + ` player stderr: ${data.toString()}`);
+      });
+
+      playerProcess.on('close', (code: number | null) => {
+        if (code === 0) {
+          console.log('player process exited successfully.');
+        } else {
+          console.error(`player process exited with code ${code}`);
+          mainWindow?.setTitle(APP_NAME + ` player process exited with code: ${code}`);
+        }
+      });
+
+      playerProcess.on('error', (err: Error) => {
+        console.error(`Failed to start player: ${err.message}`);
+        mainWindow?.setTitle(APP_NAME + ` Failed to start player: ${err.message}`);
+      });
     });
   }
-}
+};
 
-function preparePlayer(parameters: string[]): void {
+function preparePlayer(parameters: string[], magnet: string): void {
   mainWindow?.setTitle(APP_NAME + ` Запускаем плеер...`);
   let initialPath = store.get('vlc_path', '') as string;
   if (initialPath.length !== 0 && fs.existsSync(initialPath)) {
-    runPlayer(parameters);
+    runPlayer(parameters, magnet);
     return;
   }
   let hintPath = '';
@@ -494,7 +524,7 @@ function preparePlayer(parameters: string[]): void {
       } else {
         store.set('vlc_path', initialPath);
       }
-      runPlayer(parameters);
+      runPlayer(parameters, magnet);
     }
   }).catch(err => {
     console.error('Ошибка при выборе файла:', err);
