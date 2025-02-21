@@ -414,6 +414,7 @@ export interface AppConfig {
   url_handler_deny: string,
   boosty_vip_link: string,
   torr_server_urls: string[],
+  torr_server_locations: string[],
 }
 
 function loadConfig(config_url: string): void {

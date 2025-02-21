@@ -260,7 +260,7 @@ function setupButtons(kpTitle: string, year: string | null): void {
       const servers: Record<number, string> = {};
 
       for (const [index, value] of appConfig!.torr_server_urls.entries()) {
-        servers[index] = value;
+        servers[index] = `${appConfig!.torr_server_locations[index]}::${value}`;
       }
       prompt({
         skipTaskbar: false,
@@ -277,7 +277,7 @@ function setupButtons(kpTitle: string, year: string | null): void {
             console.log('User cancelled');
             mainWindow?.setTitle(APP_NAME);
           } else {
-            selectedTorrServerUrl = servers[Number(result)];
+            selectedTorrServerUrl = servers[Number(result)].split('::')[1];
             handleMagnet(url, userToken!);
           }
         })
