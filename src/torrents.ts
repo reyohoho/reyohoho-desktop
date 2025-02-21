@@ -399,16 +399,18 @@ function runPlayer(parameters: string[], magnet: string) {
       noLink: true,
       title: `Выберите плеер`,
       message: `Выберите плеер: внутренний(mpv) или внешний (${playerPath})`,
-      buttons: ['Внутренний(mpv)', 'Внешний', 'Скопировать ссылку на стрим', 'Скопировать magnet'],
+      buttons: ['Отмена', 'Внутренний(mpv)', 'Внешний', 'Скопировать ссылку на стрим', 'Скопировать magnet'],
     }).then((result) => {
       if (result.response === 0) {
-        playerPath = `${__dirname}\\prebuilts\\windows\\player\\mpv.exe`;
+        return;
       } else if (result.response === 1) {
-        playerPath = store.get('vlc_path', '') as string;
+        playerPath = `${__dirname}\\prebuilts\\windows\\player\\mpv.exe`;
       } else if (result.response === 2) {
+        playerPath = store.get('vlc_path', '') as string;
+      } else if (result.response === 3) {
         clipboard.writeText(parameters.join())
         return;
-      } else if (result.response === 3) {
+      } else if (result.response === 4) {
         clipboard.writeText(magnet)
         return;
       }
@@ -442,14 +444,16 @@ function runPlayer(parameters: string[], magnet: string) {
       noLink: true,
       title: `Выберите действие`,
       message: ``,
-      buttons: ['Открыть плеер', 'Скопировать ссылку на стрим', 'Скопировать magnet'],
+      buttons: ['Отмена', 'Открыть плеер', 'Скопировать ссылку на стрим', 'Скопировать magnet'],
     }).then((result) => {
       if (result.response === 0) {
-        playerPath = store.get('vlc_path', '') as string;
+        return;
       } else if (result.response === 1) {
+        playerPath = store.get('vlc_path', '') as string;
+      } else if (result.response === 2) {
         clipboard.writeText(parameters.join())
         return;
-      } else if (result.response === 2) {
+      } else if (result.response === 3) {
         clipboard.writeText(magnet)
         return;
       }
