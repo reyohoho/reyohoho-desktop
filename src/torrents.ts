@@ -231,7 +231,7 @@ function handleMagnet(url: string, base64Credentials: string): void {
             return;
           }
           if (data["file_stats"].length === 1) {
-            const playUrl = encodeURI(`${selectedTorrServerUrl}play/${hash}/1`);
+            const playUrl = encodeURI(`${selectedTorrServerUrl}stream/${data["file_stats"][0]["path"]}?link=${hash}&index=1&play`);
             console.log(`Final url: ${playUrl}`);
             mainWindow?.setTitle(APP_NAME + ' Успешно получена ссылка на стрим...');
             preparePlayer([playUrl], url);
@@ -331,14 +331,13 @@ const videoExtensions = [".webm", ".mkv", ".flv", ".vob", ".ogv", ".ogg", ".rrc"
   ".flv", ".f4v", ".f4p", ".f4a", ".f4b", ".mod"];
 
 async function showTorrentFilesSelectorDialog(hash: string, files: { id: number; path: string; length: number }[], magnet: string) {
-  const records: Record<number, string> = {};
+  const records: Record<number, string> = { [-1]: "Передать все как плейлист" };
   for (const [index, value] of files.filter((file) => {
     const isVideoFile = videoExtensions.some(ext => file.path.endsWith(ext));
     return isVideoFile;
   }).entries()) {
     records[index] = value.path + '?id=' + value.id;
   }
-
   console.log(records);
   prompt({
     skipTaskbar: false,
@@ -358,39 +357,29 @@ async function showTorrentFilesSelectorDialog(hash: string, files: { id: number;
         console.log(result);
         const id = records[Number(result)].split('=').reverse()[0];
         console.log(id);
-        const playUrl = encodeURI(`${selectedTorrServerUrl}play/${hash}/${id}`);
-        console.log(`Final url: ${playUrl}`);
-        mainWindow?.setTitle(APP_NAME + ' Успешно получена ссылка на стрим...');
-        preparePlayer([playUrl], magnet);
+        if (result === '-1') {
+          let playUrl: string[] = [];
+          for (const key in records) {
+            if (records.hasOwnProperty(key) && key !== '-1') {
+              const numericKey = Number(key);
+              const id = records[Number(numericKey)].split('=').reverse()[0];
+              const path = records[Number(numericKey)].split('?id=')[0];
+              playUrl.push(encodeURI(`${selectedTorrServerUrl}stream/${path}?link=${hash}&index=${id}&play`));
+            }
+          }
+          console.log(`Final url: ${playUrl}.`);
+          mainWindow?.setTitle(APP_NAME + ' Успешно получена ссылка на стрим...');
+          preparePlayer(playUrl, magnet);
+        } else {
+          const playUrl = encodeURI(`${selectedTorrServerUrl}stream/${records[Number(result)].split('?id=')[0]}?link=${hash}&index=${id}&play`);
+          console.log(`Final url: ${playUrl}.`);
+          mainWindow?.setTitle(APP_NAME + ' Успешно получена ссылка на стрим...');
+          preparePlayer([playUrl], magnet);
+        }
+
       }
     })
 }
-
-const findCommonPrefix = (paths: string[]): string => {
-  if (paths.length === 0) return '';
-
-  let prefix = paths[0];
-  for (let i = 1; i < paths.length; i++) {
-    let j = 0;
-    while (j < prefix.length && j < paths[i].length && prefix[j] === paths[i][j]) {
-      j++;
-    }
-    prefix = prefix.slice(0, j);
-    if (prefix === '') break;
-  }
-
-  return prefix;
-};
-
-const removeCommonPrefixFromPaths = (fileStats: { id: number; path: string; length: number }[]) => {
-  const paths = fileStats.map(file => file.path);
-  const commonPrefix = findCommonPrefix(paths);
-
-  return fileStats.map(file => {
-    const newPath = file.path.replace(commonPrefix, '');
-    return { ...file, path: newPath };
-  });
-};
 
 function runPlayer(parameters: string[], magnet: string) {
   let playerPath = store.get('vlc_path', '') as string;
