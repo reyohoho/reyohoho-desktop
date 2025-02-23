@@ -5,7 +5,7 @@ local timer = nil  -- Таймер для авто-скрытия
 function show_tooltip()
     local osd_w, osd_h = mp.get_osd_size()
     local ass = assdraw.ass_new()
-    ass:append("{\\an7\\fs30\\bord1\\shad0\\pos(10,10)}ReYohoho::F2 - Blur::F3 - Compressor::F4 - Mirror")
+    ass:append("{\\an7\\fs30\\bord1\\shad0\\pos(10,10)}F2 - Blur::F3 - Compressor::F4 - Mirror")
     mp.set_osd_ass(osd_w, osd_h, ass.text)
 
     -- Сброс старого таймера (если есть)
