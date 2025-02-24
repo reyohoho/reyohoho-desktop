@@ -257,6 +257,16 @@ function setupButtons(kpTitle: string, year: string | null): void {
     if (url.startsWith('magnet:')) {
       event.preventDefault();
 
+      const storeValue = store.get('selected_torr_server_url', '');
+
+      const indexInStore = appConfig!.torr_server_urls.findIndex(url => url === storeValue);
+      if (indexInStore !== -1) {
+        const [movedValue] = appConfig!.torr_server_urls.splice(indexInStore, 1);
+        const [movedLocation] = appConfig!.torr_server_locations.splice(indexInStore, 1);
+
+        appConfig!.torr_server_urls.unshift(movedValue);
+        appConfig!.torr_server_locations.unshift(movedLocation);
+      }
       const servers: Record<number, string> = {};
 
       for (const [index, value] of appConfig!.torr_server_urls.entries()) {
@@ -277,7 +287,9 @@ function setupButtons(kpTitle: string, year: string | null): void {
             console.log('User cancelled');
             mainWindow?.setTitle(APP_NAME);
           } else {
-            selectedTorrServerUrl = servers[Number(result)].split('::')[1];
+            const selectedUrl = servers[Number(result)].split('::')[1];
+            selectedTorrServerUrl = selectedUrl;
+            store.set('selected_torr_server_url', selectedUrl);
             handleMagnet(url, userToken!);
           }
         })
