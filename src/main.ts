@@ -424,17 +424,13 @@ function loadConfig(config_url: string): void {
       appConfig = data;
 
       const filter = {
-        urls: [appConfig!.alloha_cdn_filter_url, appConfig!.lumex_cdn_filter_url]
+        urls: ['*://*/*']
       };
 
       session.defaultSession.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
         try {
-          if (!details.requestHeaders['Referer']) return;
-          if (details.requestHeaders['Referer'].includes(appConfig!.alloha_referer)) {
+          if (details.requestHeaders['Referer'] && details.requestHeaders['Referer'].includes(appConfig!.alloha_referer)) {
             details.requestHeaders['Origin'] = appConfig!.alloha_origin_url;
-          }
-          if (details.requestHeaders['Referer'].includes(appConfig!.lumex_referer)) {
-            details.requestHeaders['Origin'] = appConfig!.lumex_origin_url;
           }
           callback({ requestHeaders: details.requestHeaders });
         } catch (e) {
