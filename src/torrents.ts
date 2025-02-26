@@ -155,15 +155,16 @@ interface FetchOptions {
 async function fetchWithRetry(
   url: string,
   options: FetchOptions,
-  delay: number = 200,
+  delay: number = 1000,
   retryCount: number = 1,
+  retryMaxCount: number = 50,
 ): Promise<any> {
   try {
-    if (retryCount > 50) {
-      mainWindow?.setTitle(APP_NAME + ` Не удалось получить hash(попыток: ${retryCount})`);
+    if (retryCount > retryMaxCount) {
+      mainWindow?.setTitle(APP_NAME + ` Не удалось получить hash(попыток: ${retryCount}/${retryMaxCount})`);
       return;
     }
-    mainWindow?.setTitle(APP_NAME + ` Получаем hash... попытка ${retryCount}`);
+    mainWindow?.setTitle(APP_NAME + ` Получаем hash... попытка ${retryCount}/${retryMaxCount}`);
     const response = await fetch(url, options);
     const data = await response.json();
     console.log(`Stat: ${data["stat"]}`)
