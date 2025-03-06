@@ -416,7 +416,6 @@ function runPlayer(parameters: string[], magnet: string) {
         clipboard.writeText(magnet)
         return;
       }
-      globalShortcut.unregister('F2');
       const playerProcess: ChildProcess = spawn(playerPath, parameters);
       playerProcess.stdout?.on('data', (data: Buffer) => {
         console.log(`player stdout: ${data.toString()}`);
@@ -459,7 +458,6 @@ function runPlayer(parameters: string[], magnet: string) {
         clipboard.writeText(magnet)
         return;
       }
-      globalShortcut.unregister('F2');
       const playerProcess: ChildProcess = spawn(playerPath, parameters);
       playerProcess.stdout?.on('data', (data: Buffer) => {
         console.log(`player stdout: ${data.toString()}`);

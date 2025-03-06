@@ -43,12 +43,6 @@ const menu = Menu.buildFromTemplate([
         click: () => {
           mainWindow?.webContents.openDevTools();
         }
-      },
-      {
-        label: 'Настройка хоткеев',
-        click: () => {
-          openHotkeysSettings();
-        }
       }
     ]
   }
@@ -446,21 +440,6 @@ function loadConfig(config_url: string): void {
     });
 }
 
-function openHotkeysSettings(): void {
-  if (mainWindow != null) {
-    dialog.showMessageBox(mainWindow, {
-      noLink: true,
-      title: `Настройка хоткеев`,
-      checkboxLabel: `Перехватывать`,
-      checkboxChecked: store.get('blur_hotkey_is_global', true) as boolean,
-      message: `Перехватывать глобально кнопку F2? (для работы блюра, когда приложение не в фокусе)`,
-      buttons: ['Сохранить'],
-    }).then((result) => {
-      store.set('blur_hotkey_is_global', result['checkboxChecked']);
-    });
-  }
-}
-
 function registerHotkeys(): void {
   globalShortcut.register('F1', openTorrents);
   globalShortcut.register('F2', switchBlurVideo);
@@ -655,9 +634,7 @@ app.on('will-quit', () => {
 
 app.on('browser-window-blur', () => {
   globalShortcut.unregister('F1');
-  if (!store.get('blur_hotkey_is_global', true) as boolean) {
-    globalShortcut.unregister('F2');
-  }
+  globalShortcut.unregister('F2');
   globalShortcut.unregister('F3');
   globalShortcut.unregister('F4');
   globalShortcut.unregister('F5');
