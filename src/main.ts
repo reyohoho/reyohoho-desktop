@@ -70,8 +70,9 @@ torrentsButton.style.color = 'white';
 torrentsButton.style.border = '1px solid white';
 torrentsButton.style.borderRadius = '5px';
 torrentsButton.style.cursor = 'pointer';
-torrentsButton.disabled = true;
-torrentsButton.style.pointerEvents = 'none';
+torrentsButton.addEventListener('click', function() {
+    window.location.href = 'reyohoho-vip';
+});
 buttonContainerVIP.appendChild(torrentsButton);
 `;
 
@@ -584,6 +585,13 @@ async function createWindow(configError: any | ''): Promise<void> {
   mainWindow?.webContents.on('did-finish-load', () => {
     addVIPButton();
     mainWindow?.webContents.executeJavaScript(addButtonsScript);
+  });
+
+  mainWindow?.webContents.on('will-navigate', (event, url) => {
+    if (url.includes('reyohoho-vip')) {
+      event.preventDefault();
+      openTorrents();
+    }
   });
 
   mainWindow.on('closed', function () {
