@@ -31,6 +31,12 @@ const menu = Menu.buildFromTemplate([
         }
       }
     ]
+  },
+  {
+    label: 'Указать magnet вручную',
+    click: () => {
+      openMagnetInputDialog();
+    }
   }
 ]);
 
@@ -40,6 +46,74 @@ if (!AbortSignal.timeout) {
     setTimeout(() => ctrl.abort(), ms);
     return ctrl.signal;
   };
+}
+
+function openMagnet(magnetValue: string): void {
+  const storeValue = store.get('selected_torr_server_url', '');
+
+  const indexInStore = appConfig!.torr_server_urls.findIndex(url => url === storeValue);
+  if (indexInStore !== -1) {
+    const [movedValue] = appConfig!.torr_server_urls.splice(indexInStore, 1);
+    const [movedLocation] = appConfig!.torr_server_locations.splice(indexInStore, 1);
+
+    appConfig!.torr_server_urls.unshift(movedValue);
+    appConfig!.torr_server_locations.unshift(movedLocation);
+  }
+  const servers: Record<number, string> = {};
+
+  for (const [index, value] of appConfig!.torr_server_urls.entries()) {
+    servers[index] = `${appConfig!.torr_server_locations[index]}::${value}`;
+  }
+  prompt({
+    skipTaskbar: false,
+    alwaysOnTop: true,
+    title: 'Выберите сервер',
+    label: 'Выберите сервер:',
+    type: 'select',
+    resizable: true,
+    width: 1000,
+    selectOptions: servers
+  })
+    .then((result: string | null) => {
+      if (result === null) {
+        console.log('User cancelled');
+        mainWindow?.setTitle(APP_NAME);
+      } else {
+        const selectedUrl = servers[Number(result)].split('::')[1];
+        selectedTorrServerUrl = selectedUrl;
+        store.set('selected_torr_server_url', selectedUrl);
+        handleMagnet(magnetValue, userToken!);
+      }
+    })
+}
+
+function openMagnetInputDialog(): void {
+  prompt({
+    skipTaskbar: false,
+    alwaysOnTop: true,
+    title: 'Введите magnet',
+    useHtmlLabel: true,
+    height: 250,
+    multiInputOptions:
+      [
+        {
+          label: "Укажите magnet", value: null, inputAttrs: {
+            type: "text",
+            required: true,
+          }
+        },
+      ],
+    resizable: true,
+    type: 'multiInput'
+  })
+    .then((result: string[] | null) => {
+      if (result === null) {
+        console.log('User cancelled');
+      } else {
+        let userMagnet = result[0];
+        openMagnet(userMagnet);
+      }
+    })
 }
 
 function changePlayerPath(): void {
@@ -258,42 +332,7 @@ function setupButtons(kpTitle: string, year: string | null): void {
     if (url.startsWith('magnet:')) {
       event.preventDefault();
 
-      const storeValue = store.get('selected_torr_server_url', '');
-
-      const indexInStore = appConfig!.torr_server_urls.findIndex(url => url === storeValue);
-      if (indexInStore !== -1) {
-        const [movedValue] = appConfig!.torr_server_urls.splice(indexInStore, 1);
-        const [movedLocation] = appConfig!.torr_server_locations.splice(indexInStore, 1);
-
-        appConfig!.torr_server_urls.unshift(movedValue);
-        appConfig!.torr_server_locations.unshift(movedLocation);
-      }
-      const servers: Record<number, string> = {};
-
-      for (const [index, value] of appConfig!.torr_server_urls.entries()) {
-        servers[index] = `${appConfig!.torr_server_locations[index]}::${value}`;
-      }
-      prompt({
-        skipTaskbar: false,
-        alwaysOnTop: true,
-        title: 'Выберите сервер',
-        label: 'Выберите сервер:',
-        type: 'select',
-        resizable: true,
-        width: 1000,
-        selectOptions: servers
-      })
-        .then((result: string | null) => {
-          if (result === null) {
-            console.log('User cancelled');
-            mainWindow?.setTitle(APP_NAME);
-          } else {
-            const selectedUrl = servers[Number(result)].split('::')[1];
-            selectedTorrServerUrl = selectedUrl;
-            store.set('selected_torr_server_url', selectedUrl);
-            handleMagnet(url, userToken!);
-          }
-        })
+      openMagnet(url);
     }
   });
 
@@ -404,15 +443,18 @@ function runPlayer(parameters: string[], magnet: string) {
       buttons: ['Отмена', 'Внутренний(mpv)', 'Внешний', 'Скопировать ссылку на стрим', 'Скопировать magnet'],
     }).then((result) => {
       if (result.response === 0) {
+        mainWindow?.setTitle(APP_NAME);
         return;
       } else if (result.response === 1) {
         playerPath = `${__dirname}\\prebuilts\\windows\\player\\mpv.exe`;
       } else if (result.response === 2) {
         playerPath = store.get('vlc_path', '') as string;
       } else if (result.response === 3) {
+        mainWindow?.setTitle(APP_NAME);
         clipboard.writeText(parameters.join())
         return;
       } else if (result.response === 4) {
+        mainWindow?.setTitle(APP_NAME);
         clipboard.writeText(magnet)
         return;
       }
@@ -448,13 +490,16 @@ function runPlayer(parameters: string[], magnet: string) {
       buttons: ['Отмена', 'Открыть плеер', 'Скопировать ссылку на стрим', 'Скопировать magnet'],
     }).then((result) => {
       if (result.response === 0) {
+        mainWindow?.setTitle(APP_NAME);
         return;
       } else if (result.response === 1) {
         playerPath = store.get('vlc_path', '') as string;
       } else if (result.response === 2) {
+        mainWindow?.setTitle(APP_NAME);
         clipboard.writeText(parameters.join())
         return;
       } else if (result.response === 3) {
+        mainWindow?.setTitle(APP_NAME);
         clipboard.writeText(magnet)
         return;
       }
