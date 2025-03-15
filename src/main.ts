@@ -28,222 +28,43 @@ if (process.platform === 'darwin') {
 
 let main_site_url;
 
-const menu = Menu.buildFromTemplate([
-  {
-    label: 'Настройки',
-    submenu: [
-      {
-        label: 'Сменить URL зеркала',
-        click: () => {
-          changeWebUrlMirror();
+const menu = (compressorButtonEnabled: boolean = true): Menu => {
+  return Menu.buildFromTemplate([
+    {
+      label: 'Настройки',
+      submenu: [
+        {
+          label: 'Сменить URL зеркала',
+          click: () => {
+            changeWebUrlMirror();
+          }
+        },
+        {
+          label: 'Открыть инструменты разработчика',
+          click: () => {
+            mainWindow?.webContents.openDevTools();
+          }
         }
-      },
-      {
-        label: 'Открыть инструменты разработчика',
-        click: () => {
-          mainWindow?.webContents.openDevTools();
-        }
-      }
-    ]
-  }
-]);
-
-const addVIPButtonScript = `
-if(document.getElementById('vip-buttonContainer')) {
-  document.getElementById('vip-buttonContainer').remove();
-}
-var buttonContainerVIP = document.createElement('div');
-buttonContainerVIP.id = 'vip-buttonContainer';
-buttonContainerVIP.style.position = 'fixed';
-buttonContainerVIP.style.top = '50px';
-buttonContainerVIP.style.left = '10px';
-buttonContainerVIP.style.zIndex = 10000;
-buttonContainerVIP.style.display = 'flex';
-buttonContainerVIP.style.gap = '10px';
-document.body.appendChild(buttonContainerVIP);
-
-var torrentsButton = document.createElement('button');
-torrentsButton.textContent = 'ReYohoho VIP (F1)';
-torrentsButton.style.padding = '10px 20px';
-torrentsButton.style.backgroundColor = 'black';
-torrentsButton.style.color = 'white';
-torrentsButton.style.border = '1px solid white';
-torrentsButton.style.borderRadius = '5px';
-torrentsButton.style.cursor = 'pointer';
-torrentsButton.addEventListener('click', function() {
-    window.location.href = 'reyohoho-vip';
-});
-buttonContainerVIP.appendChild(torrentsButton);
-`;
-
-const addButtonsScript = `
-var isButtonClicked = false;
-var csource = null;
-var isInit = false;
-var isFlipButtonClicked = false;
-if(document.getElementById('rh-buttonContainer')) {
-  document.getElementById('rh-buttonContainer').remove();
-}
-
-function addButtons() {
-    if(document.getElementById('rh-buttonContainer')) {
-      document.getElementById('rh-buttonContainer').remove();
+      ]
+    },
+    {
+      label: 'ReYohoho VIP(F1)',
+      click: () => openTorrents()
+    },
+    {
+      label: "Блюр (F2)",
+      click: () => switchBlurVideo()
+    },
+    {
+      label: compressorButtonEnabled ? "Компрессор (F3)" : "Компрессор недоступен",
+      enabled: compressorButtonEnabled,
+      click: () => switchCompressor()
+    },
+    {
+      label: "Отражение (F4)",
+      click: () => switchMirror()
     }
-    const buttonContainer = document.createElement('div');
-    buttonContainer.id = 'rh-buttonContainer';
-    buttonContainer.style.position = 'fixed';
-    buttonContainer.style.top = '50px';
-    buttonContainer.style.right = '10px';
-    buttonContainer.style.zIndex = 10000;
-    buttonContainer.style.display = 'flex';
-    buttonContainer.style.gap = '10px';
-    document.body.appendChild(buttonContainer);
-
-    const blurButton = document.createElement('button');
-    blurButton.id = 'blur-button';
-    blurButton.textContent = 'Блюр (F2)';
-    blurButton.style.padding = '10px 20px';
-    blurButton.style.backgroundColor = 'black';
-    blurButton.style.color = 'white';
-    blurButton.style.border = '1px solid white';
-    blurButton.style.borderRadius = '5px';
-    blurButton.style.cursor = 'pointer';
-    blurButton.disabled = true;
-    blurButton.style.pointerEvents = 'none';
-    buttonContainer.appendChild(blurButton);
-
-    const compressorButton = document.createElement('button');
-    compressorButton.id = 'compressor_button';
-    compressorButton.textContent = 'Включить компрессор (F3)';
-    compressorButton.style.padding = '10px 20px';
-    compressorButton.style.backgroundColor = 'black';
-    compressorButton.style.color = 'white';
-    compressorButton.style.border = '1px solid white';
-    compressorButton.style.borderRadius = '5px';
-    compressorButton.style.cursor = 'pointer';
-    buttonContainer.appendChild(compressorButton);
-
-    const flipButton = document.createElement('button');
-    flipButton.id = 'flip_button';
-    flipButton.textContent = 'Включить отражение (F4)';
-    flipButton.style.padding = '10px 20px';
-    flipButton.style.backgroundColor = 'black';
-    flipButton.style.color = 'white';
-    flipButton.style.border = '1px solid white';
-    flipButton.style.borderRadius = '5px';
-    flipButton.style.cursor = 'pointer';
-    buttonContainer.appendChild(flipButton);
-
-    compressorButton.addEventListener('click', () => {
-        try {
-
-            if (!csource) {
-                const ik = document.getElementById('yohoho-iframe');
-                $('#yohoho-iframe').on('load', function () {
-                    csource = null;
-                    isButtonClicked = false;
-                    compressorButton.style.backgroundColor = 'blue';
-                    compressorButton.textContent = 'Включить компрессор (F3)';
-                });
-                const video_iframe = ik.contentDocument.querySelectorAll('video')[0];
-                video_iframe.crossOrigin = 'anonymous';
-                contextC = new AudioContext();
-                compressor = contextC.createDynamicsCompressor();
-                compressor.threshold.value = -50;
-                compressor.knee.value = 40;
-                compressor.ratio.value = 12;
-                compressor.attack.value = 0;
-                compressor.release.value = 0.25;
-                csource = contextC.createMediaElementSource(video_iframe);
-                csource.connect(contextC.destination);
-            }
-        } catch (e) {
-            console.log(e);
-        }
-
-        if (!isButtonClicked) {
-            csource.disconnect(contextC.destination);
-            csource.connect(compressor);
-            compressor.connect(contextC.destination);
-            isButtonClicked = true;
-            compressorButton.style.border = '1px solid red';
-            compressorButton.textContent = 'Выключить компрессор (F3)';
-        } else {
-            csource.disconnect(compressor);
-            compressor.disconnect(contextC.destination);
-            csource.connect(contextC.destination);
-            isButtonClicked = false;
-            compressorButton.style.border = '1px solid white';
-            compressorButton.textContent = 'Включить компрессор (F3)';
-        }
-    });
-
-    flipButton.addEventListener('click', () => {
-        const ik = document.getElementById('yohoho-iframe');
-        const video_iframe = ik.contentDocument.querySelectorAll('video')[0];
-        try {
-            if (!isInit) {
-                $('#yohoho-iframe').on('load', function () {
-                    isFlipButtonClicked = false;
-                    flipButton.style.border = '1px solid white';
-                    flipButton.textContent = 'Включить отражение (F4)';
-                });
-            }
-        } catch (e) {
-            console.log(e);
-        }
-
-        if (!isFlipButtonClicked) {
-            video_iframe.style.transform = 'scaleX(-1)';
-            isFlipButtonClicked = true;
-            flipButton.style.border = '1px solid red';
-            flipButton.textContent = 'Выключить отражение (F4)';
-        } else {
-            video_iframe.style.transform = 'scaleX(1)';
-            isFlipButtonClicked = false;
-            flipButton.style.border = '1px solid white';
-            flipButton.textContent = 'Включить отражение (F4)';
-        }
-    });
-    if (document.getElementById('yohoho-iframe').getAttribute('src').includes("reyohoho.space")) {
-        compressorButton.disabled = true;
-        compressorButton.style.border = '1px solid gray';
-        compressorButton.textContent = 'Компрессор в плеере';
-    }
-    if (document.getElementById('yohoho-iframe').getAttribute('src').includes("allarknow") || document.getElementById('yohoho-iframe').getAttribute('src').includes("videoframe") || document.getElementById('yohoho-iframe').getAttribute('src').includes("kinoserial.net")) {
-        compressorButton.disabled = true;
-        compressorButton.style.border = '1px solid gray';
-        compressorButton.textContent = 'Компрессор недоступен';
-    }
-}
-
-$(document).ready(function() {
-  function checkIframe() {
-    if ($('#yohoho-iframe').length > 0) {
-      addButtons();
-      clearInterval(intervalId);
-    }
-  }
-
-  var intervalId = setInterval(checkIframe, 500);
-
-  $('#yohoho-iframe').on('load', function () {
-    addButtons();
-    clearInterval(intervalId);
-  });
-});
-`;
-
-const addVIPButton = (): void => {
-  if (mainWindow?.webContents.getURL().includes("contact.html") || mainWindow?.webContents.getURL().includes("top.html")) {
-    mainWindow?.webContents.executeJavaScript(`
-      if(document.getElementById('vip-buttonContainer')) {
-        document.getElementById('vip-buttonContainer').remove();
-      }
-      `);
-  } else {
-    mainWindow?.webContents.executeJavaScript(addVIPButtonScript);
-  }
+  ]);
 };
 
 const reload = (): void => {
@@ -278,7 +99,7 @@ const openTorrents = (): void => {
   if (isNewCredsStored) {
     const credentials = `${store.get('login', '') as string}:${store.get('password', '') as string}`;
     const base64Credentials = Buffer.from(credentials).toString("base64");
-    mainWindow?.webContents.executeJavaScript('document.querySelector("#kp-title").innerText')
+    mainWindow?.webContents.executeJavaScript(`document.querySelector('meta[name="title-and-year"]').content`)
       .then(result => {
         const match = result.match(/^(.*?)\s*\((\d{4})\)$/);
         if (match) {
@@ -288,7 +109,9 @@ const openTorrents = (): void => {
         } else {
           createTorrentsWindow(result.replace(/\s*\(.*\)$/, ""), null, appConfig!, base64Credentials);
         }
-      })
+      }).catch(error => {
+        createTorrentsWindow('', null, appConfig!, base64Credentials);
+      });
   } else {
     prompt({
       skipTaskbar: false,
@@ -331,7 +154,7 @@ const openTorrents = (): void => {
           store.set("password", password);
           const base64Credentials = Buffer.from(credentials).toString("base64");
           isNewCredsStored = true;
-          mainWindow?.webContents.executeJavaScript('document.querySelector("#kp-title").innerText')
+          mainWindow?.webContents.executeJavaScript(`document.querySelector('meta[name="title-and-year"]').content`)
             .then(result => {
               const match = result.match(/^(.*?)\s*\((\d{4})\)$/);
               if (match) {
@@ -341,29 +164,20 @@ const openTorrents = (): void => {
               } else {
                 createTorrentsWindow(result.replace(/\s*\(.*\)$/, ""), null, appConfig!, base64Credentials);
               }
-            })
+            }).catch(error => {
+              createTorrentsWindow('', null, appConfig!, base64Credentials);
+            });
         }
       })
   }
 };
 
 const switchBlurVideo = (): void => {
-  if (!mainWindow?.isFocused()) {
-    if (mainWindow?.getOpacity() === 0.4) {
-      mainWindow?.setOpacity(1.0);
-    } else {
-      mainWindow?.setOpacity(0.4);
-    }
-  } else {
-    mainWindow?.setOpacity(1.0);
-  }
   const switchBlurScript = `
-   if(document.getElementById('yohoho-iframe').style.filter.includes('blur')) {
-    document.getElementById('blur-button').style.border = '1px solid white';
-    document.getElementById('yohoho-iframe').style.filter = '';
+   if(document.getElementsByClassName('responsive-iframe')[0].style.filter.includes('blur')) {
+    document.getElementsByClassName('responsive-iframe')[0].style.filter = '';
    } else {
-    document.getElementById('blur-button').style.border = '1px solid red';
-    document.getElementById('yohoho-iframe').style.filter = 'blur(50px)';
+    document.getElementsByClassName('responsive-iframe')[0].style.filter = 'blur(50px)';
    }
    `;
 
@@ -372,7 +186,38 @@ const switchBlurVideo = (): void => {
 
 const switchCompressor = (): void => {
   const switchCompressorScript = `
-  document.getElementById('compressor_button').click();
+  try {
+      if (!csource) {
+          video_iframe = document.getElementsByClassName('responsive-iframe')[0].contentDocument.querySelectorAll('video')[0];
+          contextC = new AudioContext();
+          compressor = contextC.createDynamicsCompressor();
+          compressor.threshold.value = -50;
+          compressor.knee.value = 40;
+          compressor.ratio.value = 12;
+          compressor.attack.value = 0;
+          compressor.release.value = 0.25;
+          csource = contextC.createMediaElementSource(video_iframe);
+          csource.connect(contextC.destination);
+      }
+  } catch (e) {
+      console.log(e);
+  }
+
+  try {
+      if (!isCompressorEnabled) {
+          csource.disconnect(contextC.destination);
+          csource.connect(compressor);
+          compressor.connect(contextC.destination);
+          isCompressorEnabled = true;
+      } else {
+          csource.disconnect(compressor);
+          compressor.disconnect(contextC.destination);
+          csource.connect(contextC.destination);
+          isCompressorEnabled = false;
+      }
+  } catch (e) {
+      console.log(e);
+  }
   `;
 
   mainWindow?.webContents.executeJavaScript(switchCompressorScript);
@@ -380,7 +225,12 @@ const switchCompressor = (): void => {
 
 const switchMirror = (): void => {
   const switchMirrorScript = `
-  document.getElementById('flip_button').click();
+        video_iframe = document.getElementsByClassName('responsive-iframe')[0].contentDocument.querySelectorAll('video')[0];
+        if (video_iframe.style.transform === '' || video_iframe.style.transform === 'scaleX(1)') {
+            video_iframe.style.transform = 'scaleX(-1)';
+        } else {
+            video_iframe.style.transform = 'scaleX(1)';
+        }
   `;
 
   mainWindow?.webContents.executeJavaScript(switchMirrorScript);
@@ -542,9 +392,9 @@ async function createWindow(configError: any | ''): Promise<void> {
   });
 
   if (process.platform !== 'darwin') {
-    mainWindow?.setMenu(menu);
+    mainWindow?.setMenu(menu());
   } else {
-    Menu.setApplicationMenu(menu);
+    Menu.setApplicationMenu(menu());
   }
 
   mainWindow?.loadFile("loader.html");
@@ -572,8 +422,11 @@ async function createWindow(configError: any | ''): Promise<void> {
 
   mainWindow.webContents.on('did-start-loading', () => {
     mainWindow?.setTitle(APP_NAME + ' Loading ....');
-    addVIPButton();
-    mainWindow?.webContents.executeJavaScript(addButtonsScript);
+    const initCompressor = `
+    var isCompressorEnabled = false;
+    var csource = null;
+    `
+    mainWindow?.webContents.executeJavaScript(initCompressor)
   });
 
   mainWindow.webContents.on('did-stop-loading', () => {
@@ -583,15 +436,11 @@ async function createWindow(configError: any | ''): Promise<void> {
   blocker?.enableBlockingInSession(mainWindow.webContents.session);
 
   mainWindow?.webContents.on('did-finish-load', () => {
-    addVIPButton();
-    mainWindow?.webContents.executeJavaScript(addButtonsScript);
-  });
-
-  mainWindow?.webContents.on('will-navigate', (event, url) => {
-    if (url.includes('reyohoho-vip')) {
-      event.preventDefault();
-      openTorrents();
-    }
+    const initCompressor = `
+    var isCompressorEnabled = false;
+    var csource = null;
+    `
+    mainWindow?.webContents.executeJavaScript(initCompressor)
   });
 
   mainWindow.on('closed', function () {
@@ -604,6 +453,43 @@ async function createWindow(configError: any | ''): Promise<void> {
     registerHotkeys();
   })
 
+  executeRepeatedly(() => {
+    mainWindow?.webContents.executeJavaScript(`document.getElementsByClassName('responsive-iframe')[0].contentDocument.querySelectorAll('video')[0].src`)
+      .then(result => {
+        if (result != null && result.includes("allarknow") || result.includes("videoframe") || result.includes("kinoserial.net")) {
+          if (process.platform !== 'darwin') {
+            mainWindow?.setMenu(menu(false));
+          } else {
+            Menu.setApplicationMenu(menu(false));
+          }
+        } else {
+          if (process.platform !== 'darwin') {
+            mainWindow?.setMenu(menu());
+          } else {
+            Menu.setApplicationMenu(menu());
+          }
+        }
+      }).catch(error => {
+        if (process.platform !== 'darwin') {
+          mainWindow?.setMenu(menu());
+        } else {
+          Menu.setApplicationMenu(menu());
+        }
+      });
+  }, 1000);
+
+  mainWindow?.on('enter-full-screen', () => {
+    mainWindow?.setMenuBarVisibility(false);
+  });
+  
+  mainWindow?.on('leave-full-screen', () => {
+    mainWindow?.setMenuBarVisibility(true);
+  });
+
+}
+
+function executeRepeatedly(callback: () => void, interval: number): void {
+  setInterval(callback, interval);
 }
 
 app.whenReady().then(() => {
