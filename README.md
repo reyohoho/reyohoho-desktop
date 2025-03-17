@@ -1,4 +1,53 @@
-# electron-quick-start
+<div align="center">
+
+<img src="icon.png" alt="ReYohoho Logo" width="150">
+
+# ReYohoho Desktop
+
+**ReYohoho** — это десктопное приложение для просмотра онлайн-контента, включая фильмы и сериалы.
+</div>
+
+## 🚀 Возможности
+
+- 🎬 Просмотр фильмов и сериалов
+- 📥 Поддержка торрентов
+- ▶️ Встроенный и внешний плеер
+- 💻 Кроссплатформенность (Windows, macOS, Linux)
+
+## 🔧 Установка
+
+### Windows
+
+1. [Скачайте установщик](https://github.com/reyohoho/reyohoho-desktop/releases/) - `ReYohoho.Setup.<версия>_x64.exe`
+2. Запустите и следуйте инструкциям.
+
+### macOS
+
+1. [Скачайте установщик](https://github.com/reyohoho/reyohoho-desktop/releases/) - `ReYohoho.Setup.<версия>_x64.dmg`
+2. Переместите приложение в «Программы».
+3. Выполните в терминале:
+   ```sh
+   xattr -cr "/Applications/ReYohoho.app"
+   ```
+4. Запустите приложение.
+
+### Linux
+
+1. [Скачайте установщик](https://github.com/reyohoho/reyohoho-desktop/releases/) - `ReYohoho.AppImage`
+2. Сделайте файл исполняемым:
+   ```sh
+   chmod a+x ReYohoho.AppImage
+   ```
+3. Запустите:
+   ```sh
+   ./ReYohoho.AppImage
+   ```
+
+## 📜 Лицензия
+
+Проект распространяется под лицензией CC0-1.0. Подробнее — в [LICENSE.md](LICENSE.md).
+
+## electron-quick-start
 
 **Clone and run for a quick way to see Electron in action.**
 
@@ -34,7 +83,3 @@ Note: If you're using Linux Bash for Windows, [see this guide](https://www.howto
 
 - [electronjs.org/docs](https://electronjs.org/docs) - all of Electron's documentation
 - [Electron Fiddle](https://electronjs.org/fiddle) - Electron Fiddle, an app to test small Electron experiments
-
-## License
-
-[CC0 1.0 (Public Domain)](LICENSE.md)
