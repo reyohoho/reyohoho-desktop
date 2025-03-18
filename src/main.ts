@@ -70,6 +70,18 @@ const menu = (): Menu => {
     {
       label: "Отражение (F4)",
       click: () => switchMirror()
+    },
+    {
+      label: "Скорость(-0.5x) 0.5x MIN (F6)",
+      click: () => decreasePlaybackSpeed()
+    },
+    {
+      label: "Сбросить скорость (F7)",
+      click: () => resetPlaybackSpeed()
+    },
+    {
+      label: "Скорость(+0.5x) 4x MAX (F8)",
+      click: () => increasePlaybackSpeed()
     }
   ]);
 };
@@ -119,11 +131,11 @@ async function openTorrents() {
     const base64Credentials = Buffer.from(credentials).toString("base64");
     const titleAndYear = await getMetaContent('title-and-year');
     const altName = await getMetaContent('original-title');
-  
+
     const match = titleAndYear.match(/^(.*?)\s*\((\d{4})\)$/);
     const title = match ? match[1].trim() : titleAndYear.replace(/\s*\(.*\)$/, "");
     const year = match ? match[2] : null;
-  
+
     createTorrentsWindow(title, year, altName, appConfig!, base64Credentials);
   } else {
     prompt({
@@ -169,11 +181,11 @@ async function openTorrents() {
           isNewCredsStored = true;
           const titleAndYear = await getMetaContent('title-and-year');
           const altName = await getMetaContent('original-title');
-        
+
           const match = titleAndYear.match(/^(.*?)\s*\((\d{4})\)$/);
           const title = match ? match[1].trim() : titleAndYear.replace(/\s*\(.*\)$/, "");
           const year = match ? match[2] : null;
-        
+
           createTorrentsWindow(title, year, altName, appConfig!, base64Credentials);
         }
       })
@@ -264,6 +276,40 @@ const switchCompressor = (): void => {
   mainWindow?.webContents.executeJavaScript(switchCompressorScript);
 };
 
+const increasePlaybackSpeed = (): void => {
+  const increasePlaybackSpeed = `
+        video_iframe = document.getElementsByClassName('responsive-iframe')[0].contentDocument.querySelectorAll('video')[0];
+        if (video_iframe.playbackRate < 4.0) {
+          video_iframe.playbackRate += 0.5;
+        }
+        window.electronAPI.showToast('Текущая скорость: ' + video_iframe.playbackRate.toString()) + 'x';
+  `;
+
+  mainWindow?.webContents.executeJavaScript(increasePlaybackSpeed);
+};
+
+const decreasePlaybackSpeed = (): void => {
+  const decreasePlaybackSpeed = `
+        video_iframe = document.getElementsByClassName('responsive-iframe')[0].contentDocument.querySelectorAll('video')[0];
+        if (video_iframe.playbackRate > 0.5) {
+          video_iframe.playbackRate -= 0.5;
+        }
+        window.electronAPI.showToast('Текущая скорость: ' + video_iframe.playbackRate.toString()) + 'x';
+  `;
+
+  mainWindow?.webContents.executeJavaScript(decreasePlaybackSpeed);
+};
+
+const resetPlaybackSpeed = (): void => {
+  const resetPlaybackSpeed = `
+        video_iframe = document.getElementsByClassName('responsive-iframe')[0].contentDocument.querySelectorAll('video')[0];
+        video_iframe.playbackRate = 1.0;
+        window.electronAPI.showToast('Текущая скорость: ' + video_iframe.playbackRate.toString()) + 'x';
+  `;
+
+  mainWindow?.webContents.executeJavaScript(resetPlaybackSpeed);
+};
+
 const switchMirror = (): void => {
   const switchMirrorScript = `
         video_iframe = document.getElementsByClassName('responsive-iframe')[0].contentDocument.querySelectorAll('video')[0];
@@ -340,6 +386,9 @@ function registerHotkeys(): void {
   globalShortcut.register('F3', switchCompressor);
   globalShortcut.register('F4', switchMirror);
   globalShortcut.register('F5', reload);
+  globalShortcut.register('F6', decreasePlaybackSpeed);
+  globalShortcut.register('F7', resetPlaybackSpeed);
+  globalShortcut.register('F8', increasePlaybackSpeed);
   globalShortcut.register('F11', () => {
     mainWindow?.webContents.toggleDevTools();
   });
@@ -587,6 +636,9 @@ app.on('browser-window-blur', () => {
   globalShortcut.unregister('F3');
   globalShortcut.unregister('F4');
   globalShortcut.unregister('F5');
+  globalShortcut.unregister('F6');
+  globalShortcut.unregister('F7');
+  globalShortcut.unregister('F8');
   globalShortcut.unregister('F11');
   globalShortcut.unregister('CommandOrControl+R');
 })
