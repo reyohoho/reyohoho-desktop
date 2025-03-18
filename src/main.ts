@@ -1,6 +1,6 @@
 import { ElectronBlocker } from '@ghostery/adblocker-electron';
 import fetch from 'cross-fetch';
-import { app, BrowserWindow, dialog, session, globalShortcut, shell, screen, Menu } from 'electron';
+import { app, BrowserWindow, dialog, session, globalShortcut, shell, screen, Menu, ipcMain } from 'electron';
 import { createTorrentsWindow } from './torrents.js'
 import prompt from 'custom-electron-prompt';
 import Store from 'electron-store';
@@ -91,6 +91,14 @@ const reload = (): void => {
     mainWindow?.loadURL(main_site_url!);
   } else {
     mainWindow?.reload();
+  }
+};
+
+const reloadIgnoringCache = (): void => {
+  if (mainWindow?.webContents.getURL().includes("loader.html")) {
+    mainWindow?.loadURL(main_site_url!);
+  } else {
+    mainWindow?.webContents.reloadIgnoringCache();
   }
 };
 
@@ -392,7 +400,7 @@ function registerHotkeys(): void {
   globalShortcut.register('F11', () => {
     mainWindow?.webContents.toggleDevTools();
   });
-  globalShortcut.register('CommandOrControl+R', reload);
+  globalShortcut.register('CommandOrControl+R', reloadIgnoringCache);
 }
 
 function changeWebUrlMirror(): void {
@@ -533,7 +541,23 @@ async function createWindow(configError: any | ''): Promise<void> {
     var isCompressorEnabled = false;
     var csource = null;
     `
-    mainWindow?.webContents.executeJavaScript(initCompressor)
+    mainWindow?.webContents.executeJavaScript(initCompressor);
+
+    mainWindow?.webContents.insertCSS(`
+      ::-webkit-scrollbar {
+        width: 5px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #292929;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #9f9f9f;
+        border-radius: 5px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #d1d1d1;
+      }
+    `);
   });
 
   mainWindow.on('closed', function () {
@@ -544,6 +568,42 @@ async function createWindow(configError: any | ''): Promise<void> {
 
   mainWindow.on('focus', function () {
     registerHotkeys();
+  })
+
+  ipcMain.on('on-hotkey', (event, key) => {
+    switch (key) {
+      case 'F1':
+        openTorrents();
+        return;
+
+      case 'F2':
+        switchBlurVideo();
+        return;
+
+      case 'F3':
+        switchCompressor();
+        return;
+
+      case 'F4':
+        switchMirror();
+        return;
+
+      case 'F6':
+        decreasePlaybackSpeed();
+        return;
+
+      case 'F7':
+        resetPlaybackSpeed();
+        return;
+
+      case 'F8':
+        increasePlaybackSpeed();
+        return;
+
+      default:
+        console.warn(`Unknown key: ${key}`);
+        return;
+    }
   })
 
   executeRepeatedly(() => {

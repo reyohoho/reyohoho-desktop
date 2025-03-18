@@ -337,6 +337,22 @@ function setupButtons(kpTitle: string, year: string | null, altname: string | nu
   });
 
   mainWindow?.webContents.on('did-finish-load', () => {
+    mainWindow?.webContents.insertCSS(`
+      ::-webkit-scrollbar {
+        width: 5px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #292929;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #9f9f9f;
+        border-radius: 5px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #d1d1d1;
+      }
+    `);
+
     const searchTorrents = `
       document.getElementById('s').value = "${kpTitle}";
       document.getElementById('altname').value = "${altname}";
@@ -392,7 +408,7 @@ async function showTorrentFilesSelectorDialog(hash: string, files: { id: number;
     records[index] = value.path + '?id=' + value.id;
   }
   console.log(records);
-  if(Object.keys(records).length === 1) {
+  if (Object.keys(records).length === 1) {
     dialog.showMessageBox(mainWindow!, {
       noLink: true,
       title: `В раздаче не найдены видео-файлы`,

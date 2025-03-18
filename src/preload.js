@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron/renderer')
 
 contextBridge.exposeInMainWorld('electronAPI', {
+  sendHotKey: (key) => ipcRenderer.send('on-hotkey', key),
   showToast: (message) => {
     const messageElement = document.createElement('div');
     messageElement.textContent = message;
@@ -20,7 +21,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     document.body.appendChild(messageElement);
 
     setTimeout(() => {
-        document.body.removeChild(messageElement);
+      document.body.removeChild(messageElement);
     }, 500);
   }
 })
