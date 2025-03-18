@@ -161,7 +161,7 @@ function changePlayerPath(): void {
   });
 }
 
-export async function createTorrentsWindow(kpTitle: string, year: string | null, config: AppConfig, token: string): Promise<void> {
+export async function createTorrentsWindow(kpTitle: string, year: string | null, altname: string | null, config: AppConfig, token: string): Promise<void> {
   appConfig = config;
   selectedTorrServerUrl = config.torr_server_urls[0];
   userToken = token;
@@ -198,7 +198,7 @@ export async function createTorrentsWindow(kpTitle: string, year: string | null,
     mainWindow?.setTitle(APP_NAME);
   });
 
-  setupButtons(kpTitle, year);
+  setupButtons(kpTitle, year, altname);
 
   if (process.platform !== 'darwin') {
     mainWindow?.setMenu(menu);
@@ -327,7 +327,7 @@ function handleMagnet(url: string, base64Credentials: string): void {
     });
 }
 
-function setupButtons(kpTitle: string, year: string | null): void {
+function setupButtons(kpTitle: string, year: string | null, altname: string | null): void {
   mainWindow?.webContents.on('will-navigate', (event, url) => {
     if (url.startsWith('magnet:')) {
       event.preventDefault();
@@ -339,6 +339,7 @@ function setupButtons(kpTitle: string, year: string | null): void {
   mainWindow?.webContents.on('did-finish-load', () => {
     const searchTorrents = `
       document.getElementById('s').value = "${kpTitle}";
+      document.getElementById('altname').value = "${altname}";
       document.querySelector('#exactSearch').checked=true;
       window.localStorage.setItem('exact', 1);
       document.querySelector('#submitButton').click();

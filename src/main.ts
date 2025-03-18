@@ -101,24 +101,30 @@ const showUpdateAvailableDialog = (): void => {
   }
 }
 
+async function getMetaContent(selector: string) {
+  try {
+    const content = await mainWindow?.webContents.executeJavaScript(
+      `document.querySelector('meta[name="${selector}"]').content`
+    );
+    return content || '';
+  } catch (error) {
+    return '';
+  }
+}
+
 let isNewCredsStored = false;
-const openTorrents = (): void => {
+async function openTorrents() {
   if (isNewCredsStored) {
     const credentials = `${store.get('login', '') as string}:${store.get('password', '') as string}`;
     const base64Credentials = Buffer.from(credentials).toString("base64");
-    mainWindow?.webContents.executeJavaScript(`document.querySelector('meta[name="title-and-year"]').content`)
-      .then(result => {
-        const match = result.match(/^(.*?)\s*\((\d{4})\)$/);
-        if (match) {
-          const title = match[1].trim();
-          const year = match[2];
-          createTorrentsWindow(title, year, appConfig!, base64Credentials);
-        } else {
-          createTorrentsWindow(result.replace(/\s*\(.*\)$/, ""), null, appConfig!, base64Credentials);
-        }
-      }).catch(error => {
-        createTorrentsWindow('', null, appConfig!, base64Credentials);
-      });
+    const titleAndYear = await getMetaContent('title-and-year');
+    const altName = await getMetaContent('original-title');
+  
+    const match = titleAndYear.match(/^(.*?)\s*\((\d{4})\)$/);
+    const title = match ? match[1].trim() : titleAndYear.replace(/\s*\(.*\)$/, "");
+    const year = match ? match[2] : null;
+  
+    createTorrentsWindow(title, year, altName, appConfig!, base64Credentials);
   } else {
     prompt({
       skipTaskbar: false,
@@ -150,7 +156,7 @@ const openTorrents = (): void => {
       resizable: true,
       type: 'multiInput'
     })
-      .then((result: string[] | null) => {
+      .then(async (result: string[] | null) => {
         if (result === null) {
           console.log('User cancelled');
         } else {
@@ -161,19 +167,14 @@ const openTorrents = (): void => {
           store.set("password", password);
           const base64Credentials = Buffer.from(credentials).toString("base64");
           isNewCredsStored = true;
-          mainWindow?.webContents.executeJavaScript(`document.querySelector('meta[name="title-and-year"]').content`)
-            .then(result => {
-              const match = result.match(/^(.*?)\s*\((\d{4})\)$/);
-              if (match) {
-                const title = match[1].trim();
-                const year = match[2];
-                createTorrentsWindow(title, year, appConfig!, base64Credentials);
-              } else {
-                createTorrentsWindow(result.replace(/\s*\(.*\)$/, ""), null, appConfig!, base64Credentials);
-              }
-            }).catch(error => {
-              createTorrentsWindow('', null, appConfig!, base64Credentials);
-            });
+          const titleAndYear = await getMetaContent('title-and-year');
+          const altName = await getMetaContent('original-title');
+        
+          const match = titleAndYear.match(/^(.*?)\s*\((\d{4})\)$/);
+          const title = match ? match[1].trim() : titleAndYear.replace(/\s*\(.*\)$/, "");
+          const year = match ? match[2] : null;
+        
+          createTorrentsWindow(title, year, altName, appConfig!, base64Credentials);
         }
       })
   }
