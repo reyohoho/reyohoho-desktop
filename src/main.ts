@@ -5,6 +5,12 @@ import { createTorrentsWindow } from './torrents.js'
 import prompt from 'custom-electron-prompt';
 import Store from 'electron-store';
 import pkg from 'electron-updater';
+import path from "node:path";
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 const { autoUpdater } = pkg;
 
 const APP_NAME = `ReYohoho Desktop ${app.getVersion()}`;
@@ -28,7 +34,8 @@ if (process.platform === 'darwin') {
 
 let main_site_url;
 
-const menu = (compressorButtonEnabled: boolean = true): Menu => {
+let compressorButtonEnabled = true;
+const menu = (): Menu => {
   return Menu.buildFromTemplate([
     {
       label: 'Настройки',
@@ -185,6 +192,35 @@ const switchBlurVideo = (): void => {
 };
 
 const switchCompressor = (): void => {
+  if (!compressorButtonEnabled) {
+    const compressorUnavailableMessage = `
+      function showToast(message) {
+        const messageElement = document.createElement('div');
+        messageElement.textContent = message;
+        messageElement.style.position = 'fixed';
+        messageElement.style.top = '0';
+        messageElement.style.left = '0';
+        messageElement.style.width = '100%';
+        messageElement.style.height = '100%';
+        messageElement.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
+        messageElement.style.color = 'white';
+        messageElement.style.display = 'flex';
+        messageElement.style.justifyContent = 'center';
+        messageElement.style.alignItems = 'center';
+        messageElement.style.fontSize = '2rem';
+        messageElement.style.zIndex = '99000';
+
+        document.body.appendChild(messageElement);
+
+        setTimeout(() => {
+            document.body.removeChild(messageElement);
+        }, 500);
+    }
+    showToast("Компрессор недоступен в этом плеере");
+    `;
+    mainWindow?.webContents.executeJavaScript(compressorUnavailableMessage);
+    return;
+  }
   const switchCompressorScript = `
   try {
       if (!csource) {
@@ -201,6 +237,7 @@ const switchCompressor = (): void => {
       }
   } catch (e) {
       console.log(e);
+      window.electronAPI.showToast("Ошибка при включении компрессора");
   }
 
   try {
@@ -209,14 +246,17 @@ const switchCompressor = (): void => {
           csource.connect(compressor);
           compressor.connect(contextC.destination);
           isCompressorEnabled = true;
+          window.electronAPI.showToast("Компрессор включён");
       } else {
           csource.disconnect(compressor);
           compressor.disconnect(contextC.destination);
           csource.connect(contextC.destination);
           isCompressorEnabled = false;
+          window.electronAPI.showToast("Компрессор отключён");
       }
   } catch (e) {
       console.log(e);
+      window.electronAPI.showToast("Ошибка при включении компрессора");
   }
   `;
 
@@ -226,10 +266,12 @@ const switchCompressor = (): void => {
 const switchMirror = (): void => {
   const switchMirrorScript = `
         video_iframe = document.getElementsByClassName('responsive-iframe')[0].contentDocument.querySelectorAll('video')[0];
-        if (video_iframe.style.transform === '' || video_iframe.style.transform === 'scaleX(1)') {
+        if (video_iframe.style.transform === '' || video_iframe.style.transform === 'scaleX(1)' || video_iframe.style.transform === 'scale(1)') {
             video_iframe.style.transform = 'scaleX(-1)';
+            window.electronAPI.showToast("Зеркало включено");
         } else {
             video_iframe.style.transform = 'scaleX(1)';
+          window.electronAPI.showToast("Зеркало отключёно");
         }
   `;
 
@@ -354,7 +396,8 @@ async function createWindow(configError: any | ''): Promise<void> {
       icon: 'icon.png',
       show: false,
       webPreferences: {
-        contextIsolation: false,
+        preload: path.join(__dirname, 'preload.js'),
+        contextIsolation: true,
         webSecurity: false,
         devTools: true,
       }
@@ -454,15 +497,25 @@ async function createWindow(configError: any | ''): Promise<void> {
   })
 
   executeRepeatedly(() => {
-    mainWindow?.webContents.executeJavaScript(`document.getElementsByClassName('responsive-iframe')[0].contentDocument.querySelectorAll('video')[0].src`)
+    mainWindow?.webContents.executeJavaScript(`
+      var iframe = document.getElementsByClassName('responsive-iframe')[0];
+      if (iframe && iframe.contentDocument) {
+        var video = iframe.contentDocument.querySelectorAll('video')[0];
+        video ? video.src : null;
+      } else {
+        null;
+      }
+    `)
       .then(result => {
-        if (result != null && result.includes("allarknow") || result.includes("videoframe") || result.includes("kinoserial.net")) {
+        if (result != null && (result.includes("allarknow") || result.includes("videoframe") || result.includes("kinoserial.net"))) {
+          compressorButtonEnabled = false;
           if (process.platform !== 'darwin') {
-            mainWindow?.setMenu(menu(false));
+            mainWindow?.setMenu(menu());
           } else {
-            Menu.setApplicationMenu(menu(false));
+            Menu.setApplicationMenu(menu());
           }
         } else {
+          compressorButtonEnabled = true;
           if (process.platform !== 'darwin') {
             mainWindow?.setMenu(menu());
           } else {
@@ -470,6 +523,7 @@ async function createWindow(configError: any | ''): Promise<void> {
           }
         }
       }).catch(error => {
+        compressorButtonEnabled = true;
         if (process.platform !== 'darwin') {
           mainWindow?.setMenu(menu());
         } else {
@@ -481,7 +535,7 @@ async function createWindow(configError: any | ''): Promise<void> {
   mainWindow?.on('enter-full-screen', () => {
     mainWindow?.setMenuBarVisibility(false);
   });
-  
+
   mainWindow?.on('leave-full-screen', () => {
     mainWindow?.setMenuBarVisibility(true);
   });
