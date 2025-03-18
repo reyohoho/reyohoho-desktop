@@ -392,6 +392,15 @@ async function showTorrentFilesSelectorDialog(hash: string, files: { id: number;
     records[index] = value.path + '?id=' + value.id;
   }
   console.log(records);
+  if(Object.keys(records).length === 1) {
+    dialog.showMessageBox(mainWindow!, {
+      noLink: true,
+      title: `В раздаче не найдены видео-файлы`,
+      message: `Поддерживаемые форматы: ${videoExtensions.join(", ")}`,
+      buttons: ['Ok'],
+    })
+    return;
+  }
   prompt({
     skipTaskbar: false,
     alwaysOnTop: true,
