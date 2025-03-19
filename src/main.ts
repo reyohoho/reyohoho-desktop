@@ -72,6 +72,10 @@ const menu = (): Menu => {
       click: () => switchMirror()
     },
     {
+      label: "Обновить (F5) Принуд.:(Ctrl+F5)",
+      click: () => reload()
+    },
+    {
       label: "Скорость(-0.5x) 0.5x MIN (F6)",
       click: () => decreasePlaybackSpeed()
     },
@@ -400,7 +404,7 @@ function registerHotkeys(): void {
   globalShortcut.register('F11', () => {
     mainWindow?.webContents.toggleDevTools();
   });
-  globalShortcut.register('CommandOrControl+R', reloadIgnoringCache);
+  globalShortcut.register('CommandOrControl+F5', reloadIgnoringCache);
 }
 
 function changeWebUrlMirror(): void {
@@ -605,6 +609,36 @@ async function createWindow(configError: any | ''): Promise<void> {
         return;
     }
   })
+
+  mainWindow.webContents.on('context-menu', (e, props) => {
+    if (props.formControlType === 'input-text') {
+      const InputMenu = Menu.buildFromTemplate([{
+        label: 'Cut',
+        role: 'cut',
+      }, {
+        label: 'Copy',
+        role: 'copy',
+      }, {
+        label: 'Paste',
+        role: 'paste',
+      }, {
+        type: 'separator',
+      }, {
+        label: 'Select all',
+        role: 'selectAll',
+      },
+      ]);
+      InputMenu.popup();
+    } else if (props.editFlags?.canCopy) {
+      const InputMenu = Menu.buildFromTemplate([
+        {
+          label: 'Copy',
+          role: 'copy',
+        }
+      ]);
+      InputMenu.popup();
+    }
+  });
 
   executeRepeatedly(() => {
     mainWindow?.webContents.executeJavaScript(`
