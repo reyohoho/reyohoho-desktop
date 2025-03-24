@@ -43,6 +43,14 @@
       "package.json",
       "loader.html"
     ],
+    "protocols": [
+      {
+          "name": "ReYohoho",
+          "schemes": [
+              "reyohoho"
+          ]
+      }
+   ],
     "win": {
       "asar": false,
       "target": "nsis",

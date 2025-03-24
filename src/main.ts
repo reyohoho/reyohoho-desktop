@@ -1,6 +1,6 @@
 import { ElectronBlocker } from '@ghostery/adblocker-electron';
 import fetch from 'cross-fetch';
-import { app, BrowserWindow, dialog, session, globalShortcut, shell, screen, Menu, ipcMain } from 'electron';
+import { app, BrowserWindow, dialog, session, globalShortcut, shell, screen, Menu, ipcMain, protocol } from 'electron';
 import { createTorrentsWindow } from './torrents.js'
 import prompt from 'custom-electron-prompt';
 import Store from 'electron-store';
@@ -33,6 +33,7 @@ if (process.platform === 'darwin') {
 }
 
 let main_site_url;
+let deep_link_data: String | null;
 
 let compressorButtonEnabled = true;
 const menu = (): Menu => {
@@ -568,7 +569,11 @@ async function createWindow(configError: any | ''): Promise<void> {
     mainWindow = null
   })
 
-  mainWindow?.loadURL(main_site_url!);
+  if(deep_link_data) {
+    mainWindow?.loadURL(`${main_site_url!}/${deep_link_data}`);
+  } else {
+    mainWindow?.loadURL(main_site_url!);
+  }
 
   mainWindow.on('focus', function () {
     registerHotkeys();
@@ -691,8 +696,23 @@ function executeRepeatedly(callback: () => void, interval: number): void {
 }
 
 app.whenReady().then(() => {
+  app.setAsDefaultProtocolClient('reyohoho');
   loadConfig(config_main_url);
   registerHotkeys();
+
+  if (process.platform === 'win32' || process.platform === 'linux') {
+    const url = process.argv.find(arg => arg.startsWith('reyohoho://'));
+    if (url) {
+      deep_link_data = url.replace('reyohoho://', '');
+    }
+  }
+});
+
+app.on('open-url', (event, url) => {
+  event.preventDefault();
+  if (url.startsWith('reyohoho://')) {
+    deep_link_data = url.replace('reyohoho://', '');
+  }
 });
 
 app.on('web-contents-created', (e, wc) => {
