@@ -397,7 +397,7 @@ app.on('web-contents-created', (e, wc) => {
 const videoExtensions = [".webm", ".mkv", ".flv", ".vob", ".ogv", ".ogg", ".rrc", ".gifv",
   ".mng", ".mov", ".avi", ".qt", ".wmv", ".yuv", ".rm", ".asf", ".amv", ".mp4", ".m4p", ".m4v",
   ".mpg", ".mp2", ".mpeg", ".mpe", ".mpv", ".m4v", ".svi", ".3gp", ".3g2", ".mxf", ".roq", ".nsv",
-  ".flv", ".f4v", ".f4p", ".f4a", ".f4b", ".mod"];
+  ".flv", ".f4v", ".f4p", ".f4a", ".f4b", ".mod", ".m2ts"];
 
 async function showTorrentFilesSelectorDialog(hash: string, files: { id: number; path: string; length: number }[], magnet: string) {
   const preRecords: { key: number; value: string }[] = [{ key: 0, value: "Передать все как плейлист" }];
