@@ -400,15 +400,16 @@ const videoExtensions = [".webm", ".mkv", ".flv", ".vob", ".ogv", ".ogg", ".rrc"
   ".flv", ".f4v", ".f4p", ".f4a", ".f4b", ".mod"];
 
 async function showTorrentFilesSelectorDialog(hash: string, files: { id: number; path: string; length: number }[], magnet: string) {
-  const records: Record<number, string> = { [-1]: "Передать все как плейлист" };
+  const preRecords: { key: number; value: string }[] = [{ key: 0, value: "Передать все как плейлист" }];
   for (const [index, value] of files.filter((file) => {
     const isVideoFile = videoExtensions.some(ext => file.path.endsWith(ext));
     return isVideoFile;
   }).entries()) {
-    records[index] = value.path + '?id=' + value.id;
+    preRecords.push({ key: index + 1, value: value.path + '?id=' + value.id })
   }
-  console.log(records);
-  if (Object.keys(records).length === 1) {
+
+  console.log(preRecords);
+  if (Object.keys(preRecords).length === 1) {
     dialog.showMessageBox(mainWindow!, {
       noLink: true,
       title: `В раздаче не найдены видео-файлы`,
@@ -416,6 +417,11 @@ async function showTorrentFilesSelectorDialog(hash: string, files: { id: number;
       buttons: ['Ok'],
     })
     return;
+  }
+
+  const records: Record<string, string> = {};
+  for (const record of preRecords) {
+    records[record.key.toString()] = record.value;
   }
   prompt({
     skipTaskbar: false,
@@ -433,12 +439,10 @@ async function showTorrentFilesSelectorDialog(hash: string, files: { id: number;
         mainWindow?.setTitle(APP_NAME);
       } else {
         console.log(result);
-        const id = records[Number(result)].split('=').reverse()[0];
-        console.log(id);
-        if (result === '-1') {
+        if (result === '0') {
           let playUrl: string[] = [];
           for (const key in records) {
-            if (records.hasOwnProperty(key) && key !== '-1') {
+            if (records.hasOwnProperty(key) && key !== '0') {
               const numericKey = Number(key);
               const id = records[Number(numericKey)].split('=').reverse()[0];
               const path = records[Number(numericKey)].split('?id=')[0];
@@ -449,6 +453,8 @@ async function showTorrentFilesSelectorDialog(hash: string, files: { id: number;
           mainWindow?.setTitle(APP_NAME + ' Успешно получена ссылка на стрим...');
           preparePlayer(playUrl, magnet);
         } else {
+          const id = records[Number(result)].split('=').reverse()[0];
+          console.log(id);
           const playUrl = encodeURI(`${selectedTorrServerUrl}stream/${records[Number(result)].split('?id=')[0]}?link=${hash}&index=${id}&play`);
           console.log(`Final url: ${playUrl}.`);
           mainWindow?.setTitle(APP_NAME + ' Успешно получена ссылка на стрим...');
