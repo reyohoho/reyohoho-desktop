@@ -213,16 +213,15 @@ async function openTorrents() {
       title: 'Авторизация',
       height: 350,
       width: 500,
-      x: mainWindow!.getBounds().x + mainWindow!.getBounds().width/2,
-      y: mainWindow!.getBounds().y + mainWindow!.getBounds().height/2,
+      x: mainWindow!.getBounds().x + mainWindow!.getBounds().width / 2,
+      y: mainWindow!.getBounds().y + mainWindow!.getBounds().height / 2,
       customStylesheet: 'dark',
       frame: true,
       useHtmlLabel: true,
       label: `Просмотр торрентов без скачки через сервер ReYohoho<br>
-      Пример работы<a target="_blank" href="https://storage.yandexcloud.net/miscrhhhh/2025-02-07%2010-43-11.mp4">(видео)</a><br>
+      Пример работы<a target="_blank" href="https://storage.yandexcloud.net/miscrhhhh/2025-02-07%2010-43-11.mp4" style="color: inherit;">(видео)</a><br>
       Введите логин и пароль ReYohoho VIP<br>
-      Данные можно получить по подписке на <a target="_blank" href="${appConfig!.boosty_vip_link}">бусти</a><br>
-      (По <a target="_blank" href="https://t.me/ReYohoho_support">запросу</a> предоставлю пробный доступ)`,
+      Данные можно получить по подписке на <a target="_blank" href="${appConfig!.boosty_vip_link}" style="color: inherit;">бусти</a><br>`,
       multiInputOptions:
         [
           {
@@ -473,8 +472,8 @@ function changeWebUrlMirror(): void {
     skipTaskbar: false,
     alwaysOnTop: true,
     title: 'Укажите путь к зеркалу:',
-    x: mainWindow!.getBounds().x + mainWindow!.getBounds().width/2,
-    y: mainWindow!.getBounds().y + mainWindow!.getBounds().height/2,
+    x: mainWindow!.getBounds().x + mainWindow!.getBounds().width / 2,
+    y: mainWindow!.getBounds().y + mainWindow!.getBounds().height / 2,
     customStylesheet: 'dark',
     frame: true,
     useHtmlLabel: true,
@@ -553,7 +552,7 @@ async function createWindow(configError: any | ''): Promise<void> {
   mainWindow.setBounds(store.get('bounds') as Rectangle)
 
   mainWindow.on('close', () => {
-      store.set('bounds', mainWindow!.getBounds())
+    store.set('bounds', mainWindow!.getBounds())
   })
 
   main_site_url = store.get('user_mirror', appConfig!.main_site_url) as string;
