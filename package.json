@@ -71,7 +71,16 @@
     "linux": {
       "asar": false,
       "target": "AppImage",
-      "artifactName": "ReYohoho.Setup.${version}_${arch}.${ext}"
+      "artifactName": "ReYohoho.Setup.${version}_${arch}.${ext}",
+      "category": "AudioVideo",
+      "desktop": {
+        "entry": {
+          "Name": "ReYohoho",
+          "Terminal": "false",
+          "Type": "Application",
+          "MimeType": "x-scheme-handler/reyohoho"
+        }
+      }
     },
     "nsis": {
       "deleteAppDataOnUninstall": false,
