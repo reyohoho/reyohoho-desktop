@@ -871,12 +871,30 @@ bind_command('playlist', create_self_updating_menu_opener({
 	type = 'playlist',
 	list_prop = 'playlist',
 	serializer = function(playlist)
+		local function format_url_title(url)
+			local filename = url:match("([^/]+)%?") or url:match("[^/]+$")
+			local season = filename:match("(S%d+)") or ""
+			local episode = filename:match("(E%d+)") or ""
+			local season_episode = season .. episode
+			
+			local name_part = filename
+				:gsub("[. ]?[SE]%d+.*$", "")
+				:gsub("%.", " ")
+				:gsub("%s+", " ")
+				:gsub("^%s*(.-)%s*$", "%1")
+			
+			if season_episode ~= "" then
+				return name_part .. " " .. season_episode
+			else
+				return name_part
+			end
+		end
 		local items = {}
 		for index, item in ipairs(playlist) do
 			local is_url = is_protocol(item.filename)
 			local item_title = type(item.title) == 'string' and #item.title > 0 and item.title or false
 			items[index] = {
-				title = item_title or (is_url and item.filename or serialize_path(item.filename).basename),
+				title = item_title or (is_url and format_url_title(item.filename) or serialize_path(item.filename).basename),
 				hint = tostring(index),
 				active = item.current,
 				value = index,
