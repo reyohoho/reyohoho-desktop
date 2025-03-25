@@ -69,8 +69,8 @@ function openMagnet(magnetValue: string): void {
     alwaysOnTop: true,
     title: 'Выберите сервер',
     label: 'Выберите сервер:',
-    x: mainWindow!.getBounds().x + mainWindow!.getBounds().width/2,
-    y: mainWindow!.getBounds().y + mainWindow!.getBounds().height/2,
+    x: mainWindow!.getBounds().x + mainWindow!.getBounds().width / 2,
+    y: mainWindow!.getBounds().y + mainWindow!.getBounds().height / 2,
     customStylesheet: 'dark',
     frame: true,
     type: 'select',
@@ -96,8 +96,8 @@ function openMagnetInputDialog(): void {
     skipTaskbar: false,
     alwaysOnTop: true,
     title: 'Введите magnet',
-    x: mainWindow!.getBounds().x + mainWindow!.getBounds().width/2,
-    y: mainWindow!.getBounds().y + mainWindow!.getBounds().height/2,
+    x: mainWindow!.getBounds().x + mainWindow!.getBounds().width / 2,
+    y: mainWindow!.getBounds().y + mainWindow!.getBounds().height / 2,
     customStylesheet: 'dark',
     frame: true,
     useHtmlLabel: true,
@@ -411,16 +411,16 @@ const videoExtensions = [".webm", ".mkv", ".flv", ".vob", ".ogv", ".ogg", ".rrc"
   ".flv", ".f4v", ".f4p", ".f4a", ".f4b", ".mod", ".m2ts"];
 
 async function showTorrentFilesSelectorDialog(hash: string, files: { id: number; path: string; length: number }[], magnet: string) {
-  const preRecords: { key: number; value: string }[] = [{ key: 0, value: "Передать все как плейлист" }];
+  const records: Record<number, string> = {};
   for (const [index, value] of files.filter((file) => {
     const isVideoFile = videoExtensions.some(ext => file.path.endsWith(ext));
     return isVideoFile;
   }).entries()) {
-    preRecords.push({ key: index + 1, value: value.path + '?id=' + value.id })
+    records[index] = value.path + '?id=' + value.id;
   }
 
-  console.log(preRecords);
-  if (Object.keys(preRecords).length === 1) {
+  console.log(records);
+  if (Object.keys(records).length === 1) {
     dialog.showMessageBox(mainWindow!, {
       noLink: true,
       title: `В раздаче не найдены видео-файлы`,
@@ -430,54 +430,16 @@ async function showTorrentFilesSelectorDialog(hash: string, files: { id: number;
     return;
   }
 
-  const records: Record<string, string> = {};
-  for (const record of preRecords) {
-    records[record.key.toString()] = record.value;
+  let playUrl: string[] = [];
+  for (const key in records) {
+    const numericKey = Number(key);
+    const id = records[Number(numericKey)].split('=').reverse()[0];
+    const path = records[Number(numericKey)].split('?id=')[0];
+    playUrl.push(encodeURI(`${selectedTorrServerUrl}stream/${path}?link=${hash}&index=${id}&play`));
   }
-  prompt({
-    skipTaskbar: false,
-    alwaysOnTop: true,
-    title: 'Выберите элемент',
-    label: 'Выберите Файл:',
-    x: mainWindow!.getBounds().x + mainWindow!.getBounds().width/2,
-    y: mainWindow!.getBounds().y + mainWindow!.getBounds().height/2,
-    customStylesheet: 'dark',
-    frame: true,
-    type: 'select',
-    resizable: true,
-    width: 1000,
-    selectOptions: records
-  })
-    .then((result: string | null) => {
-      if (result === null) {
-        console.log('User cancelled');
-        mainWindow?.setTitle(APP_NAME);
-      } else {
-        console.log(result);
-        if (result === '0') {
-          let playUrl: string[] = [];
-          for (const key in records) {
-            if (records.hasOwnProperty(key) && key !== '0') {
-              const numericKey = Number(key);
-              const id = records[Number(numericKey)].split('=').reverse()[0];
-              const path = records[Number(numericKey)].split('?id=')[0];
-              playUrl.push(encodeURI(`${selectedTorrServerUrl}stream/${path}?link=${hash}&index=${id}&play`));
-            }
-          }
-          console.log(`Final url: ${playUrl}.`);
-          mainWindow?.setTitle(APP_NAME + ' Успешно получена ссылка на стрим...');
-          preparePlayer(playUrl, magnet);
-        } else {
-          const id = records[Number(result)].split('=').reverse()[0];
-          console.log(id);
-          const playUrl = encodeURI(`${selectedTorrServerUrl}stream/${records[Number(result)].split('?id=')[0]}?link=${hash}&index=${id}&play`);
-          console.log(`Final url: ${playUrl}.`);
-          mainWindow?.setTitle(APP_NAME + ' Успешно получена ссылка на стрим...');
-          preparePlayer([playUrl], magnet);
-        }
-
-      }
-    })
+  console.log(`Final url: ${playUrl}.`);
+  mainWindow?.setTitle(APP_NAME + ' Успешно получена ссылка на стрим...');
+  preparePlayer(playUrl, magnet);
 }
 
 function runPlayer(parameters: string[], magnet: string) {
