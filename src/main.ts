@@ -36,59 +36,115 @@ let main_site_url;
 let deep_link_data: String | null;
 
 let compressorButtonEnabled = true;
-const menu = (): Menu => {
-  return Menu.buildFromTemplate([
-    {
-      label: 'Настройки',
-      submenu: [
-        {
-          label: 'Сменить URL зеркала',
-          click: () => {
-            changeWebUrlMirror();
+const menu = (isMacOS = process.platform === 'darwin'): Menu => {
+  if (isMacOS) {
+    return Menu.buildFromTemplate([
+      {
+        label: 'Настройки',
+        submenu: [
+          {
+            label: 'Сменить URL зеркала',
+            click: () => {
+              changeWebUrlMirror();
+            }
+          },
+          {
+            label: 'Открыть инструменты разработчика',
+            click: () => {
+              mainWindow?.webContents.openDevTools();
+            }
+          },
+          {
+            label: 'ReYohoho VIP(F1)',
+            click: () => openTorrents()
+          },
+          {
+            label: "Блюр (F2)",
+            click: () => switchBlurVideo()
+          },
+          {
+            label: compressorButtonEnabled ? "Компрессор (F3)" : "Компрессор недоступен",
+            enabled: compressorButtonEnabled,
+            click: () => switchCompressor()
+          },
+          {
+            label: "Отражение (F4)",
+            click: () => switchMirror()
+          },
+          {
+            label: "Обновить (F5) Принуд.:(Ctrl+F5)",
+            click: () => reload()
+          },
+          {
+            label: "Скорость(-0.5x) 0.5x MIN (F6)",
+            click: () => decreasePlaybackSpeed()
+          },
+          {
+            label: "Сбросить скорость (F7)",
+            click: () => resetPlaybackSpeed()
+          },
+          {
+            label: "Скорость(+0.5x) 4x MAX (F8)",
+            click: () => increasePlaybackSpeed()
           }
-        },
-        {
-          label: 'Открыть инструменты разработчика',
-          click: () => {
-            mainWindow?.webContents.openDevTools();
-          }
-        }
-      ]
-    },
-    {
-      label: 'ReYohoho VIP(F1)',
-      click: () => openTorrents()
-    },
-    {
-      label: "Блюр (F2)",
-      click: () => switchBlurVideo()
-    },
-    {
-      label: compressorButtonEnabled ? "Компрессор (F3)" : "Компрессор недоступен",
-      enabled: compressorButtonEnabled,
-      click: () => switchCompressor()
-    },
-    {
-      label: "Отражение (F4)",
-      click: () => switchMirror()
-    },
-    {
-      label: "Обновить (F5) Принуд.:(Ctrl+F5)",
-      click: () => reload()
-    },
-    {
-      label: "Скорость(-0.5x) 0.5x MIN (F6)",
-      click: () => decreasePlaybackSpeed()
-    },
-    {
-      label: "Сбросить скорость (F7)",
-      click: () => resetPlaybackSpeed()
-    },
-    {
-      label: "Скорость(+0.5x) 4x MAX (F8)",
-      click: () => increasePlaybackSpeed()
-    }
-  ]);
+        ]
+      },
+    ]);
+  } else {
+    return Menu.buildFromTemplate([
+      {
+        label: 'Настройки',
+        submenu: [
+          {
+            label: 'Сменить URL зеркала',
+            click: () => {
+              changeWebUrlMirror();
+            }
+          },
+          {
+            label: 'Открыть инструменты разработчика',
+            click: () => {
+              mainWindow?.webContents.openDevTools();
+            }
+          },
+
+        ]
+      },
+      {
+        label: 'ReYohoho VIP(F1)',
+        click: () => openTorrents()
+      },
+      {
+        label: "Блюр (F2)",
+        click: () => switchBlurVideo()
+      },
+      {
+        label: compressorButtonEnabled ? "Компрессор (F3)" : "Компрессор недоступен",
+        enabled: compressorButtonEnabled,
+        click: () => switchCompressor()
+      },
+      {
+        label: "Отражение (F4)",
+        click: () => switchMirror()
+      },
+      {
+        label: "Обновить (F5) Принуд.:(Ctrl+F5)",
+        click: () => reload()
+      },
+      {
+        label: "Скорость(-0.5x) 0.5x MIN (F6)",
+        click: () => decreasePlaybackSpeed()
+      },
+      {
+        label: "Сбросить скорость (F7)",
+        click: () => resetPlaybackSpeed()
+      },
+      {
+        label: "Скорость(+0.5x) 4x MAX (F8)",
+        click: () => increasePlaybackSpeed()
+      }
+    ]);
+  }
 };
 
 const reload = (): void => {
@@ -569,7 +625,7 @@ async function createWindow(configError: any | ''): Promise<void> {
     mainWindow = null
   })
 
-  if(deep_link_data) {
+  if (deep_link_data) {
     mainWindow?.loadURL(`${main_site_url!}/${deep_link_data}`);
   } else {
     mainWindow?.loadURL(main_site_url!);
