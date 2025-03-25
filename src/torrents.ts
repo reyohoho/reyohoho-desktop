@@ -1,5 +1,5 @@
 import fetch from 'cross-fetch';
-import { app, BrowserWindow, dialog, shell, screen, Menu, globalShortcut, clipboard } from 'electron';
+import { app, BrowserWindow, dialog, shell, screen, Menu, globalShortcut, clipboard, Rectangle } from 'electron';
 import { spawn, ChildProcess } from 'child_process';
 import fs from 'fs';
 import prompt from 'custom-electron-prompt';
@@ -69,6 +69,10 @@ function openMagnet(magnetValue: string): void {
     alwaysOnTop: true,
     title: 'Выберите сервер',
     label: 'Выберите сервер:',
+    x: mainWindow!.getBounds().x + mainWindow!.getBounds().width/2,
+    y: mainWindow!.getBounds().y + mainWindow!.getBounds().height/2,
+    customStylesheet: 'dark',
+    frame: true,
     type: 'select',
     resizable: true,
     width: 1000,
@@ -92,6 +96,10 @@ function openMagnetInputDialog(): void {
     skipTaskbar: false,
     alwaysOnTop: true,
     title: 'Введите magnet',
+    x: mainWindow!.getBounds().x + mainWindow!.getBounds().width/2,
+    y: mainWindow!.getBounds().y + mainWindow!.getBounds().height/2,
+    customStylesheet: 'dark',
+    frame: true,
     useHtmlLabel: true,
     height: 250,
     multiInputOptions:
@@ -180,6 +188,9 @@ export async function createTorrentsWindow(kpTitle: string, year: string | null,
       partition: 'temp'
     }
   });
+
+  mainWindow.setBounds(store.get('bounds') as Rectangle)
+
   mainWindow.once('ready-to-show', () => {
     mainWindow?.maximize();
     mainWindow?.show();
@@ -428,6 +439,10 @@ async function showTorrentFilesSelectorDialog(hash: string, files: { id: number;
     alwaysOnTop: true,
     title: 'Выберите элемент',
     label: 'Выберите Файл:',
+    x: mainWindow!.getBounds().x + mainWindow!.getBounds().width/2,
+    y: mainWindow!.getBounds().y + mainWindow!.getBounds().height/2,
+    customStylesheet: 'dark',
+    frame: true,
     type: 'select',
     resizable: true,
     width: 1000,

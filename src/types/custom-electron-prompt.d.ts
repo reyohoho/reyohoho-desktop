@@ -26,6 +26,8 @@ declare module 'custom-electron-prompt' {
       type?: T;
       width?: number;
       height?: number;
+      x?: number;
+      y?: number;
       resizable?: boolean;
       title?: string;
       label?: string;

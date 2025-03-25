@@ -17,9 +17,9 @@
   "dependencies": {
     "@ghostery/adblocker-electron": "^2.5.0",
     "cross-fetch": "^4.1.0",
-    "custom-electron-prompt": "^1.5.8",
-    "electron-updater": "^6.3.9",
-    "electron-store": "^10.0.1"
+    "custom-electron-prompt": "github:reyohoho/custom-electron-prompt",
+    "electron-store": "^10.0.1",
+    "electron-updater": "^6.3.9"
   },
   "scripts": {
     "build": "tsc && cp src/preload.js dist/preload.js",
@@ -45,12 +45,12 @@
     ],
     "protocols": [
       {
-          "name": "ReYohoho",
-          "schemes": [
-              "reyohoho"
-          ]
+        "name": "ReYohoho",
+        "schemes": [
+          "reyohoho"
+        ]
       }
-   ],
+    ],
     "win": {
       "asar": false,
       "target": "nsis",

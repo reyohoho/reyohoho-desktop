@@ -1,6 +1,6 @@
 import { ElectronBlocker } from '@ghostery/adblocker-electron';
 import fetch from 'cross-fetch';
-import { app, BrowserWindow, dialog, session, globalShortcut, shell, screen, Menu, ipcMain, protocol } from 'electron';
+import { app, BrowserWindow, dialog, session, globalShortcut, shell, screen, Menu, ipcMain, Rectangle } from 'electron';
 import { createTorrentsWindow } from './torrents.js'
 import prompt from 'custom-electron-prompt';
 import Store from 'electron-store';
@@ -213,6 +213,10 @@ async function openTorrents() {
       title: 'Авторизация',
       height: 350,
       width: 500,
+      x: mainWindow!.getBounds().x + mainWindow!.getBounds().width/2,
+      y: mainWindow!.getBounds().y + mainWindow!.getBounds().height/2,
+      customStylesheet: 'dark',
+      frame: true,
       useHtmlLabel: true,
       label: `Просмотр торрентов без скачки через сервер ReYohoho<br>
       Пример работы<a target="_blank" href="https://storage.yandexcloud.net/miscrhhhh/2025-02-07%2010-43-11.mp4">(видео)</a><br>
@@ -469,6 +473,10 @@ function changeWebUrlMirror(): void {
     skipTaskbar: false,
     alwaysOnTop: true,
     title: 'Укажите путь к зеркалу:',
+    x: mainWindow!.getBounds().x + mainWindow!.getBounds().width/2,
+    y: mainWindow!.getBounds().y + mainWindow!.getBounds().height/2,
+    customStylesheet: 'dark',
+    frame: true,
     useHtmlLabel: true,
     height: 250,
     label: `Список зеркал: <a target="_blank" href="https://github.com/reyohoho/reyohoho#mirrors">github</a><br>`,
@@ -541,6 +549,12 @@ async function createWindow(configError: any | ''): Promise<void> {
     }
     return;
   }
+
+  mainWindow.setBounds(store.get('bounds') as Rectangle)
+
+  mainWindow.on('close', () => {
+      store.set('bounds', mainWindow!.getBounds())
+  })
 
   main_site_url = store.get('user_mirror', appConfig!.main_site_url) as string;
 
