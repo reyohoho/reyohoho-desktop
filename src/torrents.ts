@@ -412,7 +412,7 @@ async function showTorrentFilesSelectorDialog(hash: string, files: { id: number;
   }
 
   console.log(records);
-  if (Object.keys(records).length === 1) {
+  if (Object.keys(records).length === 0) {
     dialog.showMessageBox(mainWindow!, {
       noLink: true,
       title: `В раздаче не найдены видео-файлы`,
