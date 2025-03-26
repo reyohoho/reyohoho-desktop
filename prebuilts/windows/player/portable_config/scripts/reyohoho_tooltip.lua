@@ -4,7 +4,7 @@ local timer = nil
 function show_tooltip()
     local osd_w, osd_h = mp.get_osd_size()
     local ass = assdraw.ass_new()
-    ass:append("{\\an7\\fs20\\bord1\\shad0\\pos(15,50)}F2 Blur\\N\\NF3 Compressor\\N\\NF4 Mirror")
+    ass:append("{\\an7\\fs20\\bord1\\shad0\\pos(15,50)}F2 Blur\\N\\NF3 Audio Compressor\\N\\NF4 Mirror")
     mp.set_osd_ass(osd_w, osd_h, ass.text)
 
     if timer then
