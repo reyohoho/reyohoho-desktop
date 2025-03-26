@@ -729,23 +729,17 @@ async function createWindow(configError: any | ''): Promise<void> {
           compressorButtonEnabled = false;
           if (process.platform !== 'darwin') {
             mainWindow?.setMenu(menu());
-          } else {
-            Menu.setApplicationMenu(menu());
           }
         } else {
           compressorButtonEnabled = true;
           if (process.platform !== 'darwin') {
             mainWindow?.setMenu(menu());
-          } else {
-            Menu.setApplicationMenu(menu());
           }
         }
       }).catch(error => {
         compressorButtonEnabled = true;
         if (process.platform !== 'darwin') {
           mainWindow?.setMenu(menu());
-        } else {
-          Menu.setApplicationMenu(menu());
         }
       });
   }, 1000);

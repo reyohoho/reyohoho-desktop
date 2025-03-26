@@ -29,14 +29,14 @@ const menu = Menu.buildFromTemplate([
         click: () => {
           changePlayerPath();
         }
+      },
+      {
+        label: 'Указать magnet вручную',
+        click: () => {
+          openMagnetInputDialog();
+        }
       }
     ]
-  },
-  {
-    label: 'Указать magnet вручную',
-    click: () => {
-      openMagnetInputDialog();
-    }
   }
 ]);
 
