@@ -312,7 +312,7 @@ function handleMagnet(url: string, base64Credentials: string): void {
             const playUrl = encodeURI(`${selectedTorrServerUrl}stream/${data["file_stats"][0]["path"]}?link=${hash}&index=1&play`);
             console.log(`Final url: ${playUrl}`);
             mainWindow?.setTitle(APP_NAME + ' Успешно получена ссылка на стрим...');
-            preparePlayer([playUrl], url);
+            preparePlayer([playUrl], url, hash);
           } else {
             showTorrentFilesSelectorDialog(hash, data["file_stats"], url);
           }
@@ -431,17 +431,17 @@ async function showTorrentFilesSelectorDialog(hash: string, files: { id: number;
   }
   console.log(`Final url: ${playUrl}.`);
   mainWindow?.setTitle(APP_NAME + ' Успешно получена ссылка на стрим...');
-  preparePlayer(playUrl, magnet);
+  preparePlayer(playUrl, magnet, hash);
 }
 
-function runPlayer(parameters: string[], magnet: string) {
+function runPlayer(parameters: string[], magnet: string, hash: string) {
   let playerPath = store.get('vlc_path', '') as string;
   if (process.platform === 'win32') {
     dialog.showMessageBox(mainWindow!, {
       noLink: true,
       title: `Выберите плеер`,
       message: `Выберите плеер: внутренний(mpv) или внешний (${playerPath})`,
-      buttons: ['Отмена', 'Внутренний(mpv)', 'Внешний', 'Скопировать ссылку на стрим', 'Скопировать magnet'],
+      buttons: ['Отмена', 'Внутренний(mpv)', 'Внешний', 'Сохранить как плейлист', 'Скопировать magnet'],
     }).then((result) => {
       if (result.response === 0) {
         mainWindow?.setTitle(APP_NAME);
@@ -452,7 +452,7 @@ function runPlayer(parameters: string[], magnet: string) {
         playerPath = store.get('vlc_path', '') as string;
       } else if (result.response === 3) {
         mainWindow?.setTitle(APP_NAME);
-        clipboard.writeText(parameters.join())
+        shell.openExternal(`${selectedTorrServerUrl}playlist?hash=${hash}`);
         return;
       } else if (result.response === 4) {
         mainWindow?.setTitle(APP_NAME);
@@ -488,7 +488,7 @@ function runPlayer(parameters: string[], magnet: string) {
       noLink: true,
       title: `Выберите действие`,
       message: ``,
-      buttons: ['Отмена', 'Открыть плеер', 'Скопировать ссылку на стрим', 'Скопировать magnet'],
+      buttons: ['Отмена', 'Открыть плеер', 'Сохранить как плейлист', 'Скопировать magnet'],
     }).then((result) => {
       if (result.response === 0) {
         mainWindow?.setTitle(APP_NAME);
@@ -497,7 +497,7 @@ function runPlayer(parameters: string[], magnet: string) {
         playerPath = store.get('vlc_path', '') as string;
       } else if (result.response === 2) {
         mainWindow?.setTitle(APP_NAME);
-        clipboard.writeText(parameters.join())
+        shell.openExternal(`${selectedTorrServerUrl}playlist?hash=${hash}`);
         return;
       } else if (result.response === 3) {
         mainWindow?.setTitle(APP_NAME);
@@ -531,11 +531,11 @@ function runPlayer(parameters: string[], magnet: string) {
   }
 };
 
-function preparePlayer(parameters: string[], magnet: string): void {
+function preparePlayer(parameters: string[], magnet: string, hash: string): void {
   mainWindow?.setTitle(APP_NAME + ` Запускаем плеер...`);
   let initialPath = store.get('vlc_path', '') as string;
   if (initialPath.length !== 0 && fs.existsSync(initialPath)) {
-    runPlayer(parameters, magnet);
+    runPlayer(parameters, magnet, hash);
     return;
   }
   let hintPath = '';
@@ -574,7 +574,7 @@ function preparePlayer(parameters: string[], magnet: string): void {
       } else {
         store.set('vlc_path', initialPath);
       }
-      runPlayer(parameters, magnet);
+      runPlayer(parameters, magnet, hash);
     }
   }).catch(err => {
     console.error('Ошибка при выборе файла:', err);
