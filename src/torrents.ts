@@ -184,8 +184,7 @@ export async function createTorrentsWindow(kpTitle: string, year: string | null,
     webPreferences: {
       contextIsolation: false,
       webSecurity: false,
-      devTools: false,
-      partition: 'temp'
+      devTools: false
     }
   });
 
@@ -217,14 +216,7 @@ export async function createTorrentsWindow(kpTitle: string, year: string | null,
     Menu.setApplicationMenu(menu);
   }
 
-  setTimeout(() => {
-    const session = mainWindow?.webContents.session;
-    session?.clearCache();
-    session?.clearStorageData({
-      storages: ['localstorage']
-    });
-    mainWindow?.loadURL(`${appConfig!.torrent_parser_url}?rand=${Date.now()}`, { "extraHeaders": "pragma: no-cache\n" });
-  }, 1000);
+  mainWindow?.loadURL(`${appConfig!.torrent_parser_url}/index3.html?rand=${Date.now()}`);
 
   mainWindow.on('closed', function () {
     mainWindow = null
