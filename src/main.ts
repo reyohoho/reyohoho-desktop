@@ -424,7 +424,11 @@ export interface AppConfig {
 }
 
 function loadConfig(config_url: string): void {
-  fetch(config_url)
+  fetch(config_url, {
+    headers: {
+      'Cache-Control': 'no-cache'
+    }
+  })
     .then(response => response.json() as Promise<AppConfig>)
     .then(data => {
       appConfig = data;
