@@ -579,7 +579,7 @@ async function createWindow(configError: any | ''): Promise<void> {
   mainWindow?.loadFile("loader.html");
 
   mainWindow.setTitle(APP_NAME + ' Loading ....');
-  autoUpdater.checkForUpdatesAndNotify();
+  autoUpdater.checkForUpdates();
 
   let blocker = null;
 
@@ -837,7 +837,7 @@ autoUpdater.on('update-not-available', (info) => {
 });
 
 autoUpdater.on('update-available', () => {
-  if (mainWindow != null && process.platform === 'darwin') {
+  if (mainWindow != null) {
     dialog.showMessageBox(mainWindow, {
       noLink: true,
       type: 'info',
