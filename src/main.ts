@@ -264,16 +264,8 @@ async function openTorrents() {
   }
 };
 
-const switchBlurVideo = (): void => {
-  const switchBlurScript = `
-   if(document.getElementsByClassName('responsive-iframe')[0].style.filter.includes('blur')) {
-    document.getElementsByClassName('responsive-iframe')[0].style.filter = '';
-   } else {
-    document.getElementsByClassName('responsive-iframe')[0].style.filter = 'blur(50px)';
-   }
-   `;
-
-  mainWindow?.webContents.executeJavaScript(switchBlurScript);
+async function switchBlurVideo() {
+  mainWindow?.webContents.executeJavaScript('window.toggleBlur()');
 };
 
 const switchCompressor = (): void => {
@@ -306,46 +298,7 @@ const switchCompressor = (): void => {
     mainWindow?.webContents.executeJavaScript(compressorUnavailableMessage);
     return;
   }
-  const switchCompressorScript = `
-  try {
-      if (!csource) {
-          video_iframe = document.getElementsByClassName('responsive-iframe')[0].contentDocument.querySelectorAll('video')[0];
-          contextC = new AudioContext();
-          compressor = contextC.createDynamicsCompressor();
-          compressor.threshold.value = -50;
-          compressor.knee.value = 40;
-          compressor.ratio.value = 12;
-          compressor.attack.value = 0;
-          compressor.release.value = 0.25;
-          csource = contextC.createMediaElementSource(video_iframe);
-          csource.connect(contextC.destination);
-      }
-  } catch (e) {
-      console.log(e);
-      window.electronAPI.showToast("Ошибка при включении компрессора");
-  }
-
-  try {
-      if (!isCompressorEnabled) {
-          csource.disconnect(contextC.destination);
-          csource.connect(compressor);
-          compressor.connect(contextC.destination);
-          isCompressorEnabled = true;
-          window.electronAPI.showToast("Компрессор включён");
-      } else {
-          csource.disconnect(compressor);
-          compressor.disconnect(contextC.destination);
-          csource.connect(contextC.destination);
-          isCompressorEnabled = false;
-          window.electronAPI.showToast("Компрессор отключён");
-      }
-  } catch (e) {
-      console.log(e);
-      window.electronAPI.showToast("Ошибка при включении компрессора");
-  }
-  `;
-
-  mainWindow?.webContents.executeJavaScript(switchCompressorScript);
+  mainWindow?.webContents.executeJavaScript('window.toggleCompressor();');
 };
 
 const increasePlaybackSpeed = (): void => {
@@ -383,18 +336,7 @@ const resetPlaybackSpeed = (): void => {
 };
 
 const switchMirror = (): void => {
-  const switchMirrorScript = `
-        video_iframe = document.getElementsByClassName('responsive-iframe')[0].contentDocument.querySelectorAll('video')[0];
-        if (video_iframe.style.transform === '' || video_iframe.style.transform === 'scaleX(1)' || video_iframe.style.transform === 'scale(1)') {
-            video_iframe.style.transform = 'scaleX(-1)';
-            window.electronAPI.showToast("Зеркало включено");
-        } else {
-            video_iframe.style.transform = 'scaleX(1)';
-          window.electronAPI.showToast("Зеркало отключёно");
-        }
-  `;
-
-  mainWindow?.webContents.executeJavaScript(switchMirrorScript);
+  mainWindow?.webContents.executeJavaScript('window.toggleMirror()');
 };
 
 if (!AbortSignal.timeout) {
@@ -786,15 +728,11 @@ app.on('web-contents-created', (e, wc) => {
   wc.setWindowOpenHandler((handler) => {
     try {
       console.log("setWindowOpenHandler: " + handler.url);
-      if (BrowserWindow.getAllWindows()[0] && BrowserWindow.getAllWindows()[0].getTitle() === "Авторизация") {
-        BrowserWindow.getAllWindows()[0].close();
-      }
-      if (BrowserWindow.getAllWindows()[1] && BrowserWindow.getAllWindows()[1].getTitle() === "Авторизация") {
-        BrowserWindow.getAllWindows()[1].close();
-      }
-      if (BrowserWindow.getAllWindows()[2] && BrowserWindow.getAllWindows()[2].getTitle() === "Авторизация") {
-        BrowserWindow.getAllWindows()[2].close();
-      }
+      BrowserWindow.getAllWindows().forEach(win => {
+        if(win.getTitle() === "Авторизация") {
+          win.close();
+        }
+      });
     } catch (e) { }
 
     if (handler.url.startsWith(appConfig!.url_handler_deny)) {
