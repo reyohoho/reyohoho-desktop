@@ -476,7 +476,7 @@ function changeWebUrlMirror(): void {
     frame: true,
     useHtmlLabel: true,
     height: 250,
-    label: `Список зеркал: <a target="_blank" href="https://github.com/reyohoho/reyohoho#mirrors">github</a><br>`,
+    label: `Список зеркал: <a target="_blank" href="https://reyohoho.ru/m.json">открыть</a><br>`,
     multiInputOptions:
       [
         {
