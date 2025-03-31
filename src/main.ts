@@ -23,9 +23,7 @@ const store = new Store({});
 
 const isDebug = !app.isPackaged;
 
-const config_main_url = `https://gist.githubusercontent.com/reyohoho/c4de4c47dd9b2c3d4b2985a74056e55c/raw/reyohoho_desktop_domains.json?t=${Math.random()}`;
-
-const config_mirror_url = `https://gitlab.com/-/snippets/4805196/raw/main/snippetfile1.txt?t=${Math.random()}`;
+const config_main_url = `https://reyohoho.ru/r.json?t=${Math.random()}`;
 
 autoUpdater.autoInstallOnAppQuit = true;
 if (process.platform === 'darwin') {
@@ -535,12 +533,12 @@ async function createWindow(configError: any | ''): Promise<void> {
       dialog.showMessageBox(mainWindow, {
         noLink: true,
         type: 'error',
-        title: `Произошла ошибка при загрузке конфига`,
+        title: `Произошла ошибка при загрузке конфига, открыть канал с обновлениями в ТГ?`,
         message: `${configError}`,
-        buttons: ['Закрыть', 'Перезапустить'],
+        buttons: ['Закрыть', 'Открыть'],
       }).then((result) => {
         if (result.response === 1) {
-          loadConfig(config_mirror_url);
+          shell.openExternal('https://t.me/reyohoho_desktop');
         } else {
           if (process.platform !== 'darwin') app.quit();
         }
