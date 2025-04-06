@@ -17,7 +17,7 @@
   "dependencies": {
     "@ghostery/adblocker-electron": "^2.5.0",
     "cross-fetch": "^4.1.0",
-    "custom-electron-prompt": "github:reyohoho/custom-electron-prompt",
+    "custom-electron-prompt": "gitlab:reyohoho/custom-electron-prompt",
     "electron-store": "^10.0.1",
     "electron-updater": "^6.3.9"
   },
