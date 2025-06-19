@@ -23,10 +23,10 @@
   },
   "scripts": {
     "build": "tsc && cp src/preload.js dist/preload.js",
-    "start": "npm run build && electron .",
-    "build:win": "rm -rf ./dist && npm run build && electron-builder --win --publish=never",
-    "build:mac": "rm -rf ./dist && npm run build && electron-builder --mac --x64 --arm64 --publish=never",
-    "build:linux": "rm -rf ./dist && npm run build && electron-builder --linux --publish=never"
+    "start": "yarn build && electron .",
+    "build:win": "rm -rf ./dist && yarn build && electron-builder --win --publish=never",
+    "build:mac": "rm -rf ./dist && yarn build && electron-builder --mac --x64 --arm64 --publish=never",
+    "build:linux": "rm -rf ./dist && yarn build && electron-builder --linux --publish=never"
   },
   "build": {
     "publish": {
