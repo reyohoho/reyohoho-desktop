@@ -17,7 +17,7 @@
   "dependencies": {
     "@ghostery/adblocker-electron": "^2.5.0",
     "cross-fetch": "^4.1.0",
-    "custom-electron-prompt": "gitlab:reyohoho/custom-electron-prompt",
+    "custom-electron-prompt": "github:reyohoho/custom-electron-prompt",
     "electron-store": "^10.0.1",
     "electron-updater": "^6.3.9"
   },
@@ -92,5 +92,6 @@
       "runAfterFinish": true,
       "oneClick": false
     }
-  }
+  },
+  "packageManager": "yarn@1.22.22+sha512.a6b2f7906b721bba3d67d4aff083df04dad64c399707841b7acf00f6b133b7ac24255f2652fa22ae3534329dc6180534e98d17432037ff6fd140556e2bb3137e"
 }
