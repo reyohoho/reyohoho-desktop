@@ -811,7 +811,10 @@
       });
 
       ipcRenderer.on("player-launched", (event, data) => {
-        addLog("Плеер запущен успешно", "success");
+        addLog(
+          "Плеер запущен успешно, может потребоваться время для показа окна на время первого кэширования",
+          "success"
+        );
         document
           .querySelector('.step[data-step="6"]')
           .classList.remove("active");

@@ -65,7 +65,7 @@ function createWizardWindow(magnetUrl: string): void {
     icon: 'icon.png',
     show: false,
     parent: mainWindow || undefined,
-    modal: true,
+    modal: false,
     autoHideMenuBar: true,
     webPreferences: {
       contextIsolation: false,
@@ -475,10 +475,18 @@ function handleMagnetWithWizard(url: string, base64Credentials: string): void {
 function launchPlayer(playerPath: string, playUrls: string[]): void {
   logToWizard(`Запуск плеера: ${playerPath}`, 'info');
 
-  const playerProcess: ChildProcess = spawn(playerPath, playUrls, { detached: true });
+  const playerProcess: ChildProcess = spawn(playerPath, playUrls, {
+    detached: true,
+    stdio: ['ignore', 'ignore', 'pipe']
+  });
+
+  playerProcess.unref();
 
   playerProcess.stderr?.on('data', (data: Buffer) => {
-    logToWizard(`Player stderr: ${data.toString()}`, 'warning');
+    const errorText = data.toString();
+    if (errorText.toLowerCase().includes('error') || errorText.toLowerCase().includes('failed')) {
+      logToWizard(`Player error: ${errorText}`, 'warning');
+    }
   });
 
   playerProcess.on('close', (code: number | null) => {
@@ -679,11 +687,19 @@ function runPlayer(parameters: string[], magnet: string, hash: string) {
         clipboard.writeText(magnet)
         return;
       }
-      const playerProcess: ChildProcess = spawn(playerPath, parameters, { detached: true });
+      const playerProcess: ChildProcess = spawn(playerPath, parameters, {
+        detached: true,
+        stdio: ['ignore', 'ignore', 'pipe']
+      });
+
+      playerProcess.unref();
 
       playerProcess.stderr?.on('data', (data: Buffer) => {
-        console.error(`player stderr: ${data.toString()}`);
-        mainWindow?.setTitle(APP_NAME + ` player stderr: ${data.toString()}`);
+        const errorText = data.toString();
+        if (errorText.toLowerCase().includes('error') || errorText.toLowerCase().includes('failed')) {
+          console.error(`player stderr: ${errorText}`);
+          mainWindow?.setTitle(APP_NAME + ` player stderr: ${errorText}`);
+        }
       });
 
       playerProcess.on('close', (code: number | null) => {
@@ -699,6 +715,8 @@ function runPlayer(parameters: string[], magnet: string, hash: string) {
         console.error(`Failed to start player: ${err.message}`);
         mainWindow?.setTitle(APP_NAME + ` Failed to start player: ${err.message}`);
       });
+
+      mainWindow?.setTitle(APP_NAME + ` Плеер запущен успешно`);
     });
   } else {
     dialog.showMessageBox(mainWindow!, {
@@ -721,11 +739,19 @@ function runPlayer(parameters: string[], magnet: string, hash: string) {
         clipboard.writeText(magnet)
         return;
       }
-      const playerProcess: ChildProcess = spawn(playerPath, parameters, { detached: true });
+      const playerProcess: ChildProcess = spawn(playerPath, parameters, {
+        detached: true,
+        stdio: ['ignore', 'ignore', 'pipe']
+      });
+
+      playerProcess.unref();
 
       playerProcess.stderr?.on('data', (data: Buffer) => {
-        console.error(`player stderr: ${data.toString()}`);
-        mainWindow?.setTitle(APP_NAME + ` player stderr: ${data.toString()}`);
+        const errorText = data.toString();
+        if (errorText.toLowerCase().includes('error') || errorText.toLowerCase().includes('failed')) {
+          console.error(`player stderr: ${errorText}`);
+          mainWindow?.setTitle(APP_NAME + ` player stderr: ${errorText}`);
+        }
       });
 
       playerProcess.on('close', (code: number | null) => {
@@ -741,6 +767,8 @@ function runPlayer(parameters: string[], magnet: string, hash: string) {
         console.error(`Failed to start player: ${err.message}`);
         mainWindow?.setTitle(APP_NAME + ` Failed to start player: ${err.message}`);
       });
+
+      mainWindow?.setTitle(APP_NAME + ` Плеер запущен успешно`);
     });
   }
 };
