@@ -43,7 +43,8 @@
       "loader.html",
       "auth-window.html",
       "torrent-wizard.html",
-      "magnet-input.html"
+      "magnet-input.html",
+      "mirror-selection.html"
     ],
     "protocols": [
       {

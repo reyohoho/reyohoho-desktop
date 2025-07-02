@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Выбор зеркала</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          Oxygen, Ubuntu, Cantarell, sans-serif;
+        background: rgba(0, 0, 0, 0.9);
+        color: #ffffff;
+        padding: 20px;
+        border-radius: 12px;
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .container {
+        max-width: 500px;
+        margin: 0 auto;
+      }
+
+      .header {
+        text-align: center;
+        margin-bottom: 24px;
+      }
+
+      .title {
+        font-size: 20px;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+
+      .current-mirror {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 12px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .current-mirror-label {
+        font-size: 12px;
+        color: #cccccc;
+        margin-bottom: 4px;
+      }
+
+      .current-mirror-url {
+        font-family: "Courier New", monospace;
+        color: #4caf50;
+        word-break: break-all;
+      }
+
+      .mirror-list {
+        margin-bottom: 20px;
+      }
+
+      .buttons {
+        display: flex;
+        gap: 12px;
+        justify-content: flex-end;
+      }
+
+      button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        font-size: 14px;
+      }
+
+      .btn-cancel {
+        background: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+      }
+
+      .btn-cancel:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+
+      .btn-reset {
+        background: rgba(255, 152, 0, 0.8);
+        color: #ffffff;
+      }
+
+      .btn-reset:hover {
+        background: rgba(255, 152, 0, 1);
+      }
+
+      .btn-apply {
+        background: rgba(76, 175, 80, 0.8);
+        color: #ffffff;
+      }
+
+      .btn-apply:hover {
+        background: rgba(76, 175, 80, 1);
+      }
+
+      .btn-apply:disabled {
+        background: rgba(255, 255, 255, 0.1);
+        color: rgba(255, 255, 255, 0.5);
+        cursor: not-allowed;
+      }
+
+      .manual-input {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        padding: 16px;
+        margin-bottom: 20px;
+      }
+
+      .manual-input-label {
+        font-size: 14px;
+        color: #ffffff;
+        margin-bottom: 8px;
+        font-weight: 500;
+      }
+
+      .input-group {
+        display: flex;
+        gap: 8px;
+        align-items: stretch;
+      }
+
+      .input-group input {
+        flex: 1;
+        padding: 10px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 6px;
+        background: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+        font-family: "Courier New", monospace;
+        font-size: 14px;
+      }
+
+      .input-group input:focus {
+        outline: none;
+        border-color: #4caf50;
+        background: rgba(255, 255, 255, 0.15);
+      }
+
+      .input-group input::placeholder {
+        color: rgba(255, 255, 255, 0.5);
+      }
+
+      .btn-input-apply {
+        padding: 10px 16px;
+        background: rgba(76, 175, 80, 0.8);
+        color: #ffffff;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 500;
+        font-size: 14px;
+        white-space: nowrap;
+      }
+
+      .btn-input-apply:hover {
+        background: rgba(76, 175, 80, 1);
+      }
+
+      .list-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        font-weight: 500;
+      }
+
+      .show-list-btn {
+        padding: 6px 12px;
+        font-size: 12px;
+        background: rgba(156, 39, 176, 0.8);
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      .show-list-btn:hover {
+        background: rgba(156, 39, 176, 1);
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <div class="header">
+        <div class="title">Выбор зеркала</div>
+      </div>
+
+      <div class="current-mirror">
+        <div class="current-mirror-label">Текущее зеркало:</div>
+        <div class="current-mirror-url" id="currentMirror">Загрузка...</div>
+      </div>
+
+      <div class="manual-input">
+        <div class="manual-input-label">Ввести зеркало вручную:</div>
+        <div class="input-group">
+          <input
+            type="url"
+            id="manualMirrorInput"
+            placeholder="https://example.com"
+          />
+          <button class="btn-input-apply" onclick="applyManualMirror()">
+            Применить
+          </button>
+        </div>
+      </div>
+
+      <div class="mirror-list">
+        <div class="list-header">
+          <span>Список зеркал:</span>
+          <button class="show-list-btn" onclick="showMirrorsList()">
+            Посмотреть список зеркал
+          </button>
+        </div>
+      </div>
+
+      <div class="buttons">
+        <button class="btn-cancel" onclick="cancel()">Отмена</button>
+        <button class="btn-reset" onclick="resetToDefault()">
+          Сбросить на умолчание
+        </button>
+      </div>
+    </div>
+
+    <script>
+      const { ipcRenderer } = require("electron");
+
+      let currentMirror = "";
+      let defaultMirror = "";
+
+      async function init() {
+        try {
+          const config = await ipcRenderer.invoke("get-app-config");
+          const storedMirror = await ipcRenderer.invoke("get-stored-mirror");
+
+          defaultMirror = config.main_site_url;
+          currentMirror = storedMirror || defaultMirror;
+
+          document.getElementById("currentMirror").textContent = currentMirror;
+        } catch (error) {
+          console.error("Init error:", error);
+          document.getElementById("currentMirror").textContent =
+            "Ошибка загрузки";
+        }
+      }
+
+      function resetToDefault() {
+        ipcRenderer.send("mirror-selected", defaultMirror);
+      }
+
+      function applyManualMirror() {
+        const manualInput = document.getElementById("manualMirrorInput");
+        const url = manualInput.value.trim();
+
+        if (!url) {
+          alert("Пожалуйста, введите URL зеркала");
+          return;
+        }
+
+        try {
+          new URL(url);
+          ipcRenderer.send("mirror-selected", url);
+        } catch (error) {
+          alert(
+            "Пожалуйста, введите корректный URL (например: https://example.com)"
+          );
+        }
+      }
+
+      function showMirrorsList() {
+        ipcRenderer.invoke("open-external", "https://reyohoho.ru/m.json");
+      }
+
+      function cancel() {
+        ipcRenderer.send("mirror-cancelled");
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        const manualInput = document.getElementById("manualMirrorInput");
+        manualInput.addEventListener("keypress", function (e) {
+          if (e.key === "Enter") {
+            applyManualMirror();
+          }
+        });
+      });
+
+      window.addEventListener("DOMContentLoaded", init);
+    </script>
+  </body>
+</html>

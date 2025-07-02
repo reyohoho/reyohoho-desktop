@@ -346,23 +346,82 @@ function registerHotkeys(): void {
 
 function changeWebUrlMirror(): void {
   if (!mainWindow) return;
+  createMirrorSelectionWindow();
+}
 
-  dialog.showMessageBox(mainWindow, {
-    type: 'question',
-    title: 'Сменить URL зеркала',
-    message: 'Выберите действие:',
-    detail: `Текущее зеркало: ${store.get('user_mirror', appConfig!.main_site_url) as string}\nСписок зеркал: https://reyohoho.ru/m.json`,
-    buttons: ['Отмена', 'Сбросить на умолчание', 'Открыть список зеркал'],
-    defaultId: 0,
-    cancelId: 0
-  }).then((result) => {
-    if (result.response === 1) {
-      store.set("user_mirror", appConfig!.main_site_url);
-      main_site_url = appConfig!.main_site_url;
-      mainWindow?.loadURL(main_site_url);
-    } else if (result.response === 2) {
-      shell.openExternal('https://reyohoho.ru/m.json');
+let mirrorSelectionWindow: BrowserWindow | null = null;
+
+function createMirrorSelectionWindow(): Promise<string | null> {
+  return new Promise((resolve) => {
+    if (mirrorSelectionWindow) {
+      mirrorSelectionWindow.focus();
+      return;
     }
+
+    mirrorSelectionWindow = new BrowserWindow({
+      width: 600,
+      height: 700,
+      resizable: false,
+      maximizable: false,
+      minimizable: false,
+      alwaysOnTop: true,
+      modal: true,
+      parent: mainWindow!,
+      show: false,
+      frame: false,
+      transparent: true,
+      backgroundColor: '#00000000',
+      icon: 'icon.png',
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+      }
+    });
+
+    const handleMirrorSelected = (event: any, selectedMirror: string) => {
+      store.set("user_mirror", selectedMirror);
+      main_site_url = selectedMirror;
+      mainWindow?.loadURL(main_site_url);
+
+      if (mirrorSelectionWindow) {
+        mirrorSelectionWindow.close();
+        mirrorSelectionWindow = null;
+      }
+
+      ipcMain.removeListener('mirror-selected', handleMirrorSelected);
+      ipcMain.removeListener('mirror-cancelled', handleMirrorCancelled);
+
+      resolve(selectedMirror);
+    };
+
+    const handleMirrorCancelled = () => {
+      if (mirrorSelectionWindow) {
+        mirrorSelectionWindow.close();
+        mirrorSelectionWindow = null;
+      }
+
+      ipcMain.removeListener('mirror-selected', handleMirrorSelected);
+      ipcMain.removeListener('mirror-cancelled', handleMirrorCancelled);
+
+      resolve(null);
+    };
+
+    ipcMain.on('mirror-selected', handleMirrorSelected);
+    ipcMain.on('mirror-cancelled', handleMirrorCancelled);
+
+    mirrorSelectionWindow.on('closed', () => {
+      mirrorSelectionWindow = null;
+      ipcMain.removeListener('mirror-selected', handleMirrorSelected);
+      ipcMain.removeListener('mirror-cancelled', handleMirrorCancelled);
+      resolve(null);
+    });
+
+    mirrorSelectionWindow.loadFile('mirror-selection.html');
+
+    mirrorSelectionWindow.once('ready-to-show', () => {
+      mirrorSelectionWindow?.show();
+      mirrorSelectionWindow?.focus();
+    });
   });
 }
 
@@ -675,6 +734,10 @@ app.whenReady().then(() => {
 
   ipcMain.handle('get-app-config', () => {
     return appConfig;
+  });
+
+  ipcMain.handle('get-stored-mirror', () => {
+    return store.get('user_mirror', appConfig?.main_site_url || '') as string;
   });
 
   ipcMain.handle('open-external', (event, url) => {
