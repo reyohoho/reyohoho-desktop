@@ -1,12 +1,12 @@
 import fetch from 'cross-fetch';
-import { app, BrowserWindow, dialog, shell, screen, Menu, globalShortcut, clipboard, Rectangle } from 'electron';
+import { app, BrowserWindow, dialog, shell, screen, Menu, globalShortcut, clipboard, Rectangle, ipcMain } from 'electron';
 import { spawn, ChildProcess } from 'child_process';
 import fs from 'fs';
-import prompt from 'custom-electron-prompt';
 import Store from 'electron-store';
 import { AppConfig } from './main.js'
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import prompt from 'custom-electron-prompt';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -15,21 +15,23 @@ const APP_NAME = `ReYohoho Torrents ${app.getVersion()}`;
 
 app.commandLine.appendSwitch('disable-site-isolation-trials');
 let mainWindow: BrowserWindow | null = null;
+let wizardWindow: BrowserWindow | null = null;
 let appConfig: AppConfig | null = null;
 const store = new Store({});
 let userToken: string | null = null;
 let selectedTorrServerUrl: string | null = null;
+let currentMagnetUrl: string | null = null;
+let currentTorrentHash: string | null = null;
+
+const videoExtensions = [".webm", ".mkv", ".flv", ".vob", ".ogv", ".ogg", ".rrc", ".gifv",
+  ".mng", ".mov", ".avi", ".qt", ".wmv", ".yuv", ".rm", ".asf", ".amv", ".mp4", ".m4p", ".m4v",
+  ".mpg", ".mp2", ".mpeg", ".mpe", ".mpv", ".m4v", ".svi", ".3gp", ".3g2", ".mxf", ".roq", ".nsv",
+  ".flv", ".f4v", ".f4p", ".f4a", ".f4b", ".mod", ".m2ts"];
 
 const menu = Menu.buildFromTemplate([
   {
     label: 'Настройки',
     submenu: [
-      {
-        label: 'Сменить путь к плееру',
-        click: () => {
-          changePlayerPath();
-        }
-      },
       {
         label: 'Указать magnet вручную',
         click: () => {
@@ -48,50 +50,79 @@ if (!AbortSignal.timeout) {
   };
 }
 
+function createWizardWindow(magnetUrl: string): void {
+  if (wizardWindow) {
+    wizardWindow.focus();
+    return;
+  }
+
+  wizardWindow = new BrowserWindow({
+    width: screen.getPrimaryDisplay().workAreaSize.width,
+    height: screen.getPrimaryDisplay().workAreaSize.height,
+    darkTheme: true,
+    backgroundColor: "#1e1e2e",
+    icon: 'icon.png',
+    show: false,
+    parent: mainWindow || undefined,
+    modal: true,
+    autoHideMenuBar: true,
+    webPreferences: {
+      contextIsolation: false,
+      nodeIntegration: true,
+      webSecurity: false,
+      devTools: false
+    }
+  });
+
+  wizardWindow.setMenu(null);
+  wizardWindow.loadFile("torrent-wizard.html");
+
+  wizardWindow.once('ready-to-show', () => {
+    wizardWindow?.maximize();
+    wizardWindow?.show();
+    wizardWindow?.focus();
+
+    const servers = appConfig!.torr_server_urls.map((url, index) => ({
+      url,
+      location: appConfig!.torr_server_locations[index]
+    }));
+
+    wizardWindow?.webContents.send('init-wizard', {
+      magnetUrl,
+      servers,
+      appVersion: app.getVersion(),
+      appName: APP_NAME,
+      platform: process.platform
+    });
+  });
+
+  wizardWindow.on('closed', () => {
+    wizardWindow = null;
+    currentMagnetUrl = null;
+    currentTorrentHash = null;
+    storedPlayUrls = [];
+    storedTorrentFiles = [];
+  });
+
+  currentMagnetUrl = magnetUrl;
+}
+
+function logToWizard(message: string, type: string = 'info'): void {
+  if (wizardWindow && !wizardWindow.isDestroyed()) {
+    wizardWindow.webContents.send('step-progress', {
+      step: null,
+      message,
+      type
+    });
+  }
+}
+
 function openMagnet(magnetValue: string): void {
-  const storeValue = store.get('selected_torr_server_url', '');
-
-  const indexInStore = appConfig!.torr_server_urls.findIndex(url => url === storeValue);
-  if (indexInStore !== -1) {
-    const [movedValue] = appConfig!.torr_server_urls.splice(indexInStore, 1);
-    const [movedLocation] = appConfig!.torr_server_locations.splice(indexInStore, 1);
-
-    appConfig!.torr_server_urls.unshift(movedValue);
-    appConfig!.torr_server_locations.unshift(movedLocation);
-  }
-  const servers: Record<number, string> = {};
-
-  for (const [index, value] of appConfig!.torr_server_urls.entries()) {
-    servers[index] = `${appConfig!.torr_server_locations[index]}::${value}`;
-  }
-  prompt({
-    skipTaskbar: false,
-    alwaysOnTop: true,
-    title: 'Выберите сервер',
-    label: 'Выберите сервер:',
-    x: mainWindow!.getBounds().x + mainWindow!.getBounds().width / 2,
-    y: mainWindow!.getBounds().y + mainWindow!.getBounds().height / 2,
-    customStylesheet: 'dark',
-    frame: true,
-    type: 'select',
-    resizable: true,
-    width: 1000,
-    selectOptions: servers
-  })
-    .then((result: string | null) => {
-      if (result === null) {
-        console.log('User cancelled');
-        mainWindow?.setTitle(APP_NAME);
-      } else {
-        const selectedUrl = servers[Number(result)].split('::')[1];
-        selectedTorrServerUrl = selectedUrl;
-        store.set('selected_torr_server_url', selectedUrl);
-        handleMagnet(magnetValue, userToken!);
-      }
-    })
+  createWizardWindow(magnetValue);
 }
 
 function openMagnetInputDialog(): void {
+
   prompt({
     skipTaskbar: false,
     alwaysOnTop: true,
@@ -119,54 +150,37 @@ function openMagnetInputDialog(): void {
         console.log('User cancelled');
       } else {
         let userMagnet = result[0];
+
+        mainWindow?.webContents.executeJavaScript(`
+          const watchedTorrents = JSON.parse(localStorage.getItem('watchedTorrents') || '[]');
+          const newEntry = {
+            tracker: "Magnet выбран вручную",
+            url: "Magnet выбран вручную", 
+            title: "${userMagnet}",
+            size: 0,
+            sizeName: "Magnet выбран вручную",
+            createTime: new Date().toISOString(),
+            sid: 0,
+            pir: 0,
+            magnet: "${userMagnet.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}",
+            name: "Magnet выбран вручную",
+            originalname: "Magnet выбран вручную", 
+            relased: new Date().getFullYear(),
+            videotype: "Magnet выбран вручную",
+            quality: 0,
+            voices: ["Magnet выбран вручную"],
+            seasons: [1],
+            types: ["Magnet выбран вручную"],
+            date: Date.now(),
+            dateHuman: new Date().toISOString().split('T')[0]
+          };
+          watchedTorrents.unshift(newEntry);
+          localStorage.setItem('watchedTorrents', JSON.stringify(watchedTorrents));
+        `);
+
         openMagnet(userMagnet);
       }
     })
-}
-
-function changePlayerPath(): void {
-  let initialPath = '';
-  let hintPath = '';
-  let fileFilters;
-  if (process.platform === 'win32') {
-    fileFilters = [
-      { name: 'Executable Files', extensions: ['exe'] },
-      { name: 'All Files', extensions: ['*'] }
-    ]
-    initialPath = 'C:\\Program Files\\VideoLAN\\VLC\\vlc.exe';
-    hintPath = 'Укажите путь к VLC.exe или к mpc-hc64.exe';
-  } else if (process.platform === 'darwin') {
-    fileFilters = [
-      { name: 'All Files', extensions: ['*'] }
-    ]
-    initialPath = '/Applications/';
-    hintPath = 'Укажите путь к VLC.app';
-  } else {
-    fileFilters = [
-      { name: 'All Files', extensions: ['*'] }
-    ]
-    initialPath = '/usr/bin/';
-    hintPath = 'Укажите путь к бинарнику VLC';
-  }
-
-  dialog.showOpenDialog(mainWindow!, {
-    title: hintPath,
-    defaultPath: initialPath,
-    filters: fileFilters,
-    properties: ['openFile']
-  }).then(result => {
-    if (!result.canceled && result.filePaths.length > 0) {
-      initialPath = result.filePaths[0];
-      if (process.platform === 'darwin') {
-        store.set('vlc_path', `${initialPath}/Contents/MacOS/VLC`);
-      } else {
-        store.set('vlc_path', initialPath);
-      }
-    }
-  }).catch(err => {
-    console.error('Ошибка при выборе файла:', err);
-    mainWindow?.setTitle(APP_NAME + ` Ошибка при выборе файла: ${err}`);
-  });
 }
 
 export async function createTorrentsWindow(kpTitle: string, year: string | null, altname: string | null, config: AppConfig, token: string): Promise<void> {
@@ -259,12 +273,138 @@ async function fetchWithRetry(
   }
 }
 
-function handleMagnet(url: string, base64Credentials: string): void {
+ipcMain.on('server-selected', (event, data) => {
+  const serverIndex = data.serverIndex;
+  selectedTorrServerUrl = appConfig!.torr_server_urls[serverIndex];
+  store.set('selected_torr_server_url', selectedTorrServerUrl);
+
+  logToWizard(`Подключение к серверу ${appConfig!.torr_server_locations[serverIndex]}`, 'info');
+
+  if (currentMagnetUrl) {
+    handleMagnetWithWizard(currentMagnetUrl, userToken!);
+  }
+});
+
+ipcMain.on('files-selected', (event, data) => {
+  const selectedFiles = data.selectedFiles;
+  const files = getCurrentTorrentFiles();
+  const selectedFileData = files.filter(file => selectedFiles.includes(file.id));
+
+  logToWizard(`Подготовка ссылок для ${selectedFileData.length} файлов`, 'info');
+
+  const playUrls = selectedFileData.map(file =>
+    encodeURI(`${selectedTorrServerUrl}stream/${file.path}?link=${currentTorrentHash}&index=${file.id}&play`)
+  );
+
+  preparePlayerWithWizard(playUrls);
+});
+
+ipcMain.on('player-selected', (event, data) => {
+  const { playerType, path } = data;
+  const playUrls = getStoredPlayUrls();
+
+  if (playerType === 'internal') {
+    const mpvPath = `${__dirname}\\prebuilts\\windows\\player\\mpv.exe`;
+    launchPlayer(mpvPath, playUrls);
+  } else if (playerType === 'external') {
+    const playerPath = store.get('vlc_path', '') as string;
+    if (playerPath && fs.existsSync(playerPath)) {
+      launchPlayer(playerPath, playUrls);
+    } else {
+      logToWizard('Плеер не найден, открываем диалог выбора плеера', 'warning');
+
+      if (wizardWindow && !wizardWindow.isDestroyed()) {
+        wizardWindow.webContents.send('step-progress', {
+          step: 5,
+          message: 'Выберите плеер для воспроизведения',
+          type: 'info'
+        });
+
+        setTimeout(() => {
+          wizardWindow?.webContents.send('auto-choose-player');
+        }, 500);
+      }
+    }
+  } else if (playerType === 'custom' && path) {
+    store.set('vlc_path', path);
+    launchPlayer(path, playUrls);
+  }
+});
+
+ipcMain.on('choose-player-path', () => {
+  let initialPath = '';
+  let hintPath = '';
+  let fileFilters;
+
+  if (process.platform === 'win32') {
+    fileFilters = [
+      { name: 'Executable Files', extensions: ['exe'] },
+      { name: 'All Files', extensions: ['*'] }
+    ];
+    initialPath = 'C:\\Program Files\\VideoLAN\\VLC\\vlc.exe';
+    hintPath = 'Укажите путь к VLC.exe или к mpc-hc64.exe';
+  } else if (process.platform === 'darwin') {
+    fileFilters = [{ name: 'All Files', extensions: ['*'] }];
+    initialPath = '/Applications/';
+    hintPath = 'Укажите путь к VLC.app';
+  } else {
+    fileFilters = [{ name: 'All Files', extensions: ['*'] }];
+    initialPath = '/usr/bin/';
+    hintPath = 'Укажите путь к бинарнику VLC';
+  }
+
+  dialog.showOpenDialog(wizardWindow!, {
+    title: hintPath,
+    defaultPath: initialPath,
+    filters: fileFilters,
+    properties: ['openFile']
+  }).then(result => {
+    if (!result.canceled && result.filePaths.length > 0) {
+      let selectedPath = result.filePaths[0];
+      if (process.platform === 'darwin') {
+        selectedPath = `${selectedPath}/Contents/MacOS/VLC`;
+      }
+
+      wizardWindow?.webContents.send('player-path-selected', { path: selectedPath });
+    }
+  }).catch(err => {
+    logToWizard(`Ошибка при выборе файла: ${err}`, 'error');
+  });
+});
+
+ipcMain.on('save-playlist', (event, data) => {
+  if (currentTorrentHash) {
+    shell.openExternal(`${selectedTorrServerUrl}playlist?hash=${currentTorrentHash}`);
+    logToWizard('Плейлист открыт в браузере', 'success');
+  }
+});
+
+ipcMain.on('copy-magnet', (event, data) => {
+  if (data.magnetUrl) {
+    clipboard.writeText(data.magnetUrl);
+    logToWizard('Magnet-ссылка скопирована в буфер обмена', 'success');
+  }
+});
+
+let storedPlayUrls: string[] = [];
+let storedTorrentFiles: any[] = [];
+
+function getStoredPlayUrls(): string[] {
+  return storedPlayUrls;
+}
+
+function getCurrentTorrentFiles(): any[] {
+  return storedTorrentFiles;
+}
+
+function handleMagnetWithWizard(url: string, base64Credentials: string): void {
   const apiUrl = `${selectedTorrServerUrl}torrents`;
   const raw = JSON.stringify({
     "action": "add",
     "link": url
   });
+
+  logToWizard('Добавление торрента на сервер...', 'info');
 
   fetch(apiUrl, {
     method: 'POST',
@@ -276,7 +416,7 @@ function handleMagnet(url: string, base64Credentials: string): void {
   })
     .then(response => {
       if (response.status === 401) {
-        return Promise.reject('Ошибка 401: Неверные учетные данные');
+        return Promise.reject('Ошибка 401: Неверные учетные данные, выберите торрент сервер к которому у вас есть доступ');
       }
 
       if (!response.ok) {
@@ -286,9 +426,13 @@ function handleMagnet(url: string, base64Credentials: string): void {
       return response.json();
     })
     .then(result => {
-      const hash = result["hash"]
-      mainWindow?.setTitle(APP_NAME + ' Получаем hash...');
-      console.log('Hash:', hash);
+      const hash = result["hash"];
+      currentTorrentHash = hash;
+
+      if (wizardWindow && !wizardWindow.isDestroyed()) {
+        wizardWindow.webContents.send('torrent-added', { hash });
+      }
+
       const raw2 = JSON.stringify({
         "action": "get",
         "hash": hash
@@ -302,32 +446,94 @@ function handleMagnet(url: string, base64Credentials: string): void {
         body: raw2,
       };
 
-      fetchWithRetry(apiUrl, options)
-        .then(data => {
-          if (data["file_stats"].length === 0) {
-            mainWindow?.setTitle(APP_NAME + ' Ошибка, файлы в торренте не найдены...');
-            return;
-          }
-          if (data["file_stats"].length === 1) {
-            const playUrl = encodeURI(`${selectedTorrServerUrl}stream/${data["file_stats"][0]["path"]}?link=${hash}&index=1&play`);
-            console.log(`Final url: ${playUrl}`);
-            mainWindow?.setTitle(APP_NAME + ' Успешно получена ссылка на стрим...');
-            preparePlayer([playUrl], url, hash);
-          } else {
-            showTorrentFilesSelectorDialog(hash, data["file_stats"], url);
-          }
-
-        })
-        .catch(error => {
-          console.error('Failed get torrent:', error);
-          mainWindow?.setTitle(APP_NAME + ` Ошибка при получении ссылки на стрим: ${error}`);
-        });
-
+      fetchWithRetryWizard(apiUrl, options);
     })
     .catch(error => {
-      console.error('Get torrent hash failed:', error);
-      mainWindow?.setTitle(APP_NAME + ` Ошибка при получении hash: ${error}`);
+      logToWizard(`Ошибка при добавлении торрента: ${error}`, 'error');
     });
+}
+
+function launchPlayer(playerPath: string, playUrls: string[]): void {
+  logToWizard(`Запуск плеера: ${playerPath}`, 'info');
+
+  const playerProcess: ChildProcess = spawn(playerPath, playUrls, { detached: true });
+
+  playerProcess.stderr?.on('data', (data: Buffer) => {
+    logToWizard(`Player stderr: ${data.toString()}`, 'warning');
+  });
+
+  playerProcess.on('close', (code: number | null) => {
+    if (code === 0) {
+      logToWizard('Плеер завершил работу успешно', 'success');
+    } else {
+      logToWizard(`Плеер завершил работу с кодом: ${code}`, 'error');
+    }
+  });
+
+  playerProcess.on('error', (err: Error) => {
+    logToWizard(`Ошибка запуска плеера: ${err.message}`, 'error');
+  });
+
+  wizardWindow?.webContents.send('player-launched', { success: true });
+}
+
+function preparePlayerWithWizard(playUrls: string[]): void {
+  storedPlayUrls = playUrls;
+  logToWizard('Ссылки для воспроизведения подготовлены', 'success');
+
+  if (wizardWindow && !wizardWindow.isDestroyed()) {
+    wizardWindow.webContents.send('step-progress', {
+      step: 5,
+      message: 'Выберите плеер для воспроизведения',
+      type: 'info'
+    });
+  }
+}
+
+async function fetchWithRetryWizard(
+  url: string,
+  options: FetchOptions,
+  delay: number = 1000,
+  retryCount: number = 1,
+  retryMaxCount: number = 50,
+): Promise<any> {
+  try {
+    if (retryCount > retryMaxCount) {
+      logToWizard(`Не удалось получить hash (попыток: ${retryCount}/${retryMaxCount})`, 'error');
+      return;
+    }
+    logToWizard(`Получаем hash... попытка ${retryCount}/${retryMaxCount}`, 'info');
+    const response = await fetch(url, options);
+    const data = await response.json();
+    console.log(`Stat: ${data["stat"]}`);
+    if (data["stat"] === 3) {
+      storedTorrentFiles = data["file_stats"].filter((file: any) => {
+        const isVideoFile = videoExtensions.some(ext => file.path.endsWith(ext));
+        return isVideoFile;
+      });
+
+      logToWizard(`Получено видео файлов: ${storedTorrentFiles.length}`, 'success');
+
+      if (storedTorrentFiles.length === 0) {
+        logToWizard('В раздаче не найдены видео-файлы', 'error');
+        return;
+      }
+
+      if (wizardWindow && !wizardWindow.isDestroyed()) {
+        wizardWindow.webContents.send('files-received', { files: storedTorrentFiles });
+      }
+
+      return data;
+    } else {
+      console.log(`Status: ${response.status}. Retry in ${delay} ms...`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+      return fetchWithRetryWizard(url, options, delay, ++retryCount);
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    await new Promise(resolve => setTimeout(resolve, delay));
+    return fetchWithRetryWizard(url, options, delay, ++retryCount);
+  }
 }
 
 function setupButtons(kpTitle: string, year: string | null, altname: string | null): void {
@@ -397,11 +603,6 @@ app.on('web-contents-created', (e, wc) => {
   });
 });
 
-const videoExtensions = [".webm", ".mkv", ".flv", ".vob", ".ogv", ".ogg", ".rrc", ".gifv",
-  ".mng", ".mov", ".avi", ".qt", ".wmv", ".yuv", ".rm", ".asf", ".amv", ".mp4", ".m4p", ".m4v",
-  ".mpg", ".mp2", ".mpeg", ".mpe", ".mpv", ".m4v", ".svi", ".3gp", ".3g2", ".mxf", ".roq", ".nsv",
-  ".flv", ".f4v", ".f4p", ".f4a", ".f4b", ".mod", ".m2ts"];
-
 async function showTorrentFilesSelectorDialog(hash: string, files: { id: number; path: string; length: number }[], magnet: string) {
   const records: Record<number, string> = {};
   for (const [index, value] of files.filter((file) => {
@@ -441,7 +642,7 @@ function runPlayer(parameters: string[], magnet: string, hash: string) {
       noLink: true,
       title: `Выберите плеер`,
       message: `Выберите плеер: внутренний(mpv) или внешний (${playerPath})`,
-      buttons: ['Отмена', 'Внутренний(mpv)', 'Внешний', 'Сохранить как плейлист', 'Скопировать magnet'],
+      buttons: ['Отмена', 'Внутренний(mpv)', 'Внешний', 'Сохранить всё как плейлист', 'Скопировать magnet'],
     }).then((result) => {
       if (result.response === 0) {
         mainWindow?.setTitle(APP_NAME);
@@ -459,10 +660,7 @@ function runPlayer(parameters: string[], magnet: string, hash: string) {
         clipboard.writeText(magnet)
         return;
       }
-      const playerProcess: ChildProcess = spawn(playerPath, parameters);
-      playerProcess.stdout?.on('data', (data: Buffer) => {
-        console.log(`player stdout: ${data.toString()}`);
-      });
+      const playerProcess: ChildProcess = spawn(playerPath, parameters, { detached: true });
 
       playerProcess.stderr?.on('data', (data: Buffer) => {
         console.error(`player stderr: ${data.toString()}`);
@@ -488,7 +686,7 @@ function runPlayer(parameters: string[], magnet: string, hash: string) {
       noLink: true,
       title: `Выберите действие`,
       message: ``,
-      buttons: ['Отмена', 'Открыть плеер', 'Сохранить как плейлист', 'Скопировать magnet'],
+      buttons: ['Отмена', 'Открыть плеер', 'Сохранить всё как плейлист', 'Скопировать magnet'],
     }).then((result) => {
       if (result.response === 0) {
         mainWindow?.setTitle(APP_NAME);
@@ -504,10 +702,7 @@ function runPlayer(parameters: string[], magnet: string, hash: string) {
         clipboard.writeText(magnet)
         return;
       }
-      const playerProcess: ChildProcess = spawn(playerPath, parameters);
-      playerProcess.stdout?.on('data', (data: Buffer) => {
-        console.log(`player stdout: ${data.toString()}`);
-      });
+      const playerProcess: ChildProcess = spawn(playerPath, parameters, { detached: true });
 
       playerProcess.stderr?.on('data', (data: Buffer) => {
         console.error(`player stderr: ${data.toString()}`);

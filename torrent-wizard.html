@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Torrent Wizard</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, #1e1e2e 0%, #181825 100%);
+        color: #cdd6f4;
+        height: 100vh;
+        overflow: hidden;
+      }
+
+      .container {
+        display: flex;
+        height: 100vh;
+      }
+
+      .sidebar {
+        width: 300px;
+        background: #11111b;
+        border-right: 1px solid #313244;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .content {
+        flex: 1;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .step {
+        display: flex;
+        align-items: center;
+        padding: 15px;
+        margin-bottom: 10px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 1px solid transparent;
+      }
+
+      .step:hover {
+        background: #313244;
+      }
+
+      .step.disabled {
+        cursor: not-allowed;
+        opacity: 0.5;
+      }
+
+      .step.disabled:hover {
+        background: transparent;
+      }
+
+      .step.active {
+        background: #313244;
+        border-color: #89b4fa;
+      }
+
+      .step.completed {
+        background: #1e1e2e;
+        border-color: #a6e3a1;
+      }
+
+      .step.completed:hover {
+        background: #313244;
+        border-color: #a6e3a1;
+      }
+
+      .step.error {
+        background: #1e1e2e;
+        border-color: #f38ba8;
+      }
+
+      .step-number {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: #45475a;
+        color: #cdd6f4;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-right: 15px;
+        font-size: 14px;
+      }
+
+      .step.active .step-number {
+        background: #89b4fa;
+        color: #11111b;
+      }
+
+      .step.completed .step-number {
+        background: #a6e3a1;
+        color: #11111b;
+      }
+
+      .step.error .step-number {
+        background: #f38ba8;
+        color: #11111b;
+      }
+
+      .step-title {
+        font-weight: 500;
+        font-size: 14px;
+      }
+
+      .main-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .header {
+        margin-bottom: 30px;
+      }
+
+      .header h1 {
+        font-size: 28px;
+        font-weight: 600;
+        color: #cdd6f4;
+        margin-bottom: 8px;
+      }
+
+      .header p {
+        color: #a6adc8;
+        font-size: 16px;
+      }
+
+      .card {
+        background: #1e1e2e;
+        border: 1px solid #313244;
+        border-radius: 12px;
+        padding: 25px;
+        margin-bottom: 20px;
+      }
+
+      .form-group {
+        margin-bottom: 20px;
+      }
+
+      .form-group label {
+        display: block;
+        font-weight: 500;
+        margin-bottom: 8px;
+        color: #cdd6f4;
+      }
+
+      .form-control {
+        width: 100%;
+        padding: 12px 16px;
+        background: #11111b;
+        border: 2px solid #313244;
+        border-radius: 8px;
+        color: #cdd6f4;
+        font-size: 14px;
+        transition: all 0.3s ease;
+      }
+
+      .form-control:focus {
+        outline: none;
+        border-color: #89b4fa;
+        background: #1e1e2e;
+      }
+
+      .btn {
+        padding: 12px 24px;
+        border: none;
+        border-radius: 8px;
+        font-weight: 500;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .btn-primary {
+        background: #89b4fa;
+        color: #11111b;
+      }
+
+      .btn-primary:hover {
+        background: #74c7ec;
+      }
+
+      .btn-secondary {
+        background: #45475a;
+        color: #cdd6f4;
+      }
+
+      .btn-secondary:hover {
+        background: #585b70;
+      }
+
+      .btn-success {
+        background: #a6e3a1;
+        color: #11111b;
+      }
+
+      .btn-danger {
+        background: #f38ba8;
+        color: #11111b;
+      }
+
+      .log-container {
+        flex: 1;
+        background: #11111b;
+        border: 1px solid #313244;
+        border-radius: 8px;
+        padding: 16px;
+        overflow-y: auto;
+        max-height: 300px;
+        height: 300px;
+        font-family: "Consolas", "Monaco", monospace;
+        font-size: 13px;
+        line-height: 1.5;
+      }
+
+      .log-entry {
+        margin-bottom: 4px;
+        padding: 4px 0;
+      }
+
+      .log-entry.info {
+        color: #89b4fa;
+      }
+
+      .log-entry.success {
+        color: #a6e3a1;
+      }
+
+      .log-entry.error {
+        color: #f38ba8;
+      }
+
+      .log-entry.warning {
+        color: #f9e2af;
+      }
+
+      .file-list {
+        max-height: 300px;
+        overflow-y: auto;
+        border: 1px solid #313244;
+        border-radius: 8px;
+        background: #11111b;
+      }
+
+      .file-item {
+        padding: 12px 16px;
+        border-bottom: 1px solid #313244;
+        cursor: pointer;
+        transition: background 0.2s ease;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+
+      .file-item:hover {
+        background: #1e1e2e;
+      }
+
+      .file-item:last-child {
+        border-bottom: none;
+      }
+
+      .file-item input[type="checkbox"] {
+        margin: 0;
+      }
+
+      .file-name {
+        flex: 1;
+        font-size: 14px;
+      }
+
+      .file-size {
+        color: #a6adc8;
+        font-size: 12px;
+      }
+
+      .button-group {
+        display: flex;
+        gap: 12px;
+        margin-top: 20px;
+      }
+
+      .hidden {
+        display: none;
+      }
+
+      .loading {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        color: #89b4fa;
+      }
+
+      .spinner {
+        width: 20px;
+        height: 20px;
+        border: 2px solid #313244;
+        border-top: 2px solid #89b4fa;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .progress-bar {
+        width: 100%;
+        height: 6px;
+        background: #313244;
+        border-radius: 3px;
+        overflow: hidden;
+        margin: 16px 0;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background: #89b4fa;
+        border-radius: 3px;
+        transition: width 0.3s ease;
+        width: 0%;
+      }
+
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: #11111b;
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: #45475a;
+        border-radius: 4px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: #585b70;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="sidebar">
+        <div class="step" data-step="1">
+          <div class="step-number">1</div>
+          <div class="step-title">Выбор сервера</div>
+        </div>
+        <div class="step" data-step="2">
+          <div class="step-number">2</div>
+          <div class="step-title">Добавление торрента</div>
+        </div>
+        <div class="step" data-step="3">
+          <div class="step-number">3</div>
+          <div class="step-title">Получение файлов</div>
+        </div>
+        <div class="step" data-step="4">
+          <div class="step-number">4</div>
+          <div class="step-title">Выбор файлов</div>
+        </div>
+        <div class="step" data-step="5">
+          <div class="step-number">5</div>
+          <div class="step-title">Выбор плеера</div>
+        </div>
+        <div class="step" data-step="6">
+          <div class="step-number">6</div>
+          <div class="step-title">Запуск</div>
+        </div>
+      </div>
+
+      <div class="content">
+        <div class="main-content">
+          <div class="header">
+            <h1 id="stepTitle">Выбор сервера</h1>
+            <p id="stepDescription">
+              Выберите TorrServer для обработки торрента
+            </p>
+          </div>
+
+          <div id="step1" class="step-content">
+            <div class="card">
+              <div class="form-group">
+                <label for="serverSelect">Доступные серверы:</label>
+                <select id="serverSelect" class="form-control"></select>
+              </div>
+              <div class="button-group">
+                <button id="btnSelectServer" class="btn btn-primary">
+                  Продолжить
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div id="step2" class="step-content hidden">
+            <div class="card">
+              <div class="loading">
+                <div class="spinner"></div>
+                <span>Добавление торрента на сервер...</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill"></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="step3" class="step-content hidden">
+            <div class="card">
+              <div class="loading">
+                <div class="spinner"></div>
+                <span>Получение информации о файлах...</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill"></div>
+              </div>
+            </div>
+          </div>
+
+          <div id="step4" class="step-content hidden">
+            <div class="card">
+              <div class="form-group">
+                <label>Выберите файлы для воспроизведения:</label>
+                <div id="fileList" class="file-list"></div>
+              </div>
+              <div class="button-group">
+                <button id="btnSelectAll" class="btn btn-secondary">
+                  Выбрать все
+                </button>
+                <button id="btnSelectFiles" class="btn btn-primary">
+                  Продолжить
+                </button>
+                <button id="btnSavePlaylist" class="btn btn-secondary">
+                  Сохранить всё какплейлист
+                </button>
+                <button id="btnCopyMagnet" class="btn btn-secondary">
+                  Скопировать magnet
+                </button>
+              </div>
+              <div
+                style="
+                  margin-top: 15px;
+                  padding: 12px;
+                  background: #313244;
+                  border-radius: 8px;
+                  font-size: 13px;
+                  color: #a6adc8;
+                "
+              >
+                <strong>💡 Подсказка:</strong> Плейлист полезен для открытия в
+                VLC, особенно для сериалов(если серий много, то напрямую плеера
+                их не откроют). Плейлист перестанет работать через 3 часа и
+                потребует повторного сохранения
+              </div>
+            </div>
+          </div>
+
+          <div id="step5" class="step-content hidden">
+            <div class="card">
+              <div class="form-group">
+                <label>Выберите плеер:</label>
+                <div class="button-group">
+                  <button id="btnInternalPlayer" class="btn btn-primary">
+                    Внутренний (mpv)
+                  </button>
+                  <button id="btnExternalPlayer" class="btn btn-secondary">
+                    Внешний плеер
+                  </button>
+                  <button id="btnChoosePlayer" class="btn btn-secondary">
+                    Сменить внешний плеер
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div id="step6" class="step-content hidden">
+            <div class="card">
+              <div class="loading">
+                <div class="spinner"></div>
+                <span>Запуск плеера...</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="flex: 1; min-height: 200px">
+            <div
+              class="form-group"
+              style="
+                margin-bottom: 12px;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+              "
+            >
+              <label>Логи:</label>
+              <button
+                id="btnCopyLog"
+                class="btn btn-secondary"
+                style="padding: 8px 16px; font-size: 12px"
+              >
+                Копировать лог
+              </button>
+            </div>
+            <div id="logContainer" class="log-container"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const { ipcRenderer } = require("electron");
+
+      let currentStep = 1;
+      let maxAvailableStep = 1;
+      let magnetUrl = "";
+      let selectedServer = "";
+      let torrentHash = "";
+      let torrentFiles = [];
+      let selectedFiles = [];
+
+      function updateStep(step, allowNavigation = false) {
+        if (step > maxAvailableStep) {
+          maxAvailableStep = step;
+        }
+
+        document.querySelectorAll(".step").forEach((s) => {
+          const stepNum = parseInt(s.dataset.step);
+          s.classList.remove("active", "completed", "error", "disabled");
+
+          if (stepNum === step) {
+            s.classList.add("active");
+          } else if (
+            stepNum < step ||
+            (stepNum <= maxAvailableStep && allowNavigation)
+          ) {
+            s.classList.add("completed");
+          } else if (stepNum > maxAvailableStep) {
+            s.classList.add("disabled");
+          }
+        });
+
+        document.querySelectorAll(".step-content").forEach((content) => {
+          content.classList.add("hidden");
+        });
+
+        const currentContent = document.getElementById(`step${step}`);
+        if (currentContent) {
+          currentContent.classList.remove("hidden");
+        }
+
+        const titles = {
+          1: "Выбор сервера",
+          2: "Добавление торрента",
+          3: "Получение файлов",
+          4: "Выбор файлов",
+          5: "Выбор плеера",
+          6: "Запуск",
+        };
+
+        const descriptions = {
+          1: "Выберите TorrServer для обработки торрента",
+          2: "Добавление магнет-ссылки на сервер",
+          3: "Получение информации о файлах торрента",
+          4: "Выберите файлы для воспроизведения",
+          5: "Выберите плеер для воспроизведения",
+          6: "Запуск выбранного плеера",
+        };
+
+        document.getElementById("stepTitle").textContent = titles[step] || "";
+        document.getElementById("stepDescription").textContent =
+          descriptions[step] || "";
+
+        currentStep = step;
+      }
+
+      function navigateToStep(targetStep) {
+        if (targetStep <= maxAvailableStep) {
+          updateStep(targetStep, true);
+        }
+      }
+
+      function addLog(message, type = "info") {
+        const logContainer = document.getElementById("logContainer");
+        const logEntry = document.createElement("div");
+        logEntry.className = `log-entry ${type}`;
+
+        const timestamp = new Date().toLocaleTimeString();
+        logEntry.textContent = `[${timestamp}] ${message}`;
+
+        logContainer.appendChild(logEntry);
+        logContainer.scrollTop = logContainer.scrollHeight;
+      }
+
+      function setStepError(step) {
+        const stepElement = document.querySelector(
+          `.step[data-step="${step}"]`
+        );
+        if (stepElement) {
+          stepElement.classList.remove("active", "completed");
+          stepElement.classList.add("error");
+        }
+      }
+
+      ipcRenderer.on("init-wizard", (event, data) => {
+        magnetUrl = data.magnetUrl;
+
+        const logContainer = document.getElementById("logContainer");
+        logContainer.innerHTML = "";
+
+        addLog(`Версия: ${data.appVersion}`, "info");
+
+        const serverSelect = document.getElementById("serverSelect");
+        data.servers.forEach((server, index) => {
+          const option = document.createElement("option");
+          option.value = index;
+          option.textContent = `${server.location} - ${server.url}`;
+          serverSelect.appendChild(option);
+        });
+
+        addLog(`Magnet URL: ${magnetUrl.substring(0, 100)}...`);
+
+        if (data.platform !== "win32") {
+          const internalPlayerBtn =
+            document.getElementById("btnInternalPlayer");
+          if (internalPlayerBtn) {
+            internalPlayerBtn.style.display = "none";
+            addLog("Внутренний плеер доступен только на Windows", "info");
+          }
+        }
+
+        document.querySelectorAll(".step").forEach((stepElement) => {
+          stepElement.addEventListener("click", () => {
+            const stepNumber = parseInt(stepElement.dataset.step);
+            if (!stepElement.classList.contains("disabled")) {
+              navigateToStep(stepNumber);
+            }
+          });
+        });
+      });
+
+      document
+        .getElementById("btnSelectServer")
+        .addEventListener("click", () => {
+          const serverIndex = document.getElementById("serverSelect").value;
+          selectedServer = serverIndex;
+
+          addLog(`Выбран сервер #${parseInt(serverIndex) + 1}`);
+          updateStep(2);
+
+          ipcRenderer.send("server-selected", {
+            serverIndex: parseInt(serverIndex),
+          });
+        });
+
+      document.getElementById("btnSelectAll").addEventListener("click", () => {
+        const checkboxes = document.querySelectorAll(
+          '#fileList input[type="checkbox"]'
+        );
+        const allChecked = Array.from(checkboxes).every((cb) => cb.checked);
+
+        checkboxes.forEach((checkbox) => {
+          checkbox.checked = !allChecked;
+        });
+
+        const checkedCount = document.querySelectorAll(
+          '#fileList input[type="checkbox"]:checked'
+        ).length;
+
+        if (allChecked) {
+          document.getElementById("btnSelectAll").textContent = "Выбрать все";
+        } else {
+          document.getElementById("btnSelectAll").textContent = "Снять все";
+        }
+      });
+
+      document
+        .getElementById("btnSelectFiles")
+        .addEventListener("click", () => {
+          const checkboxes = document.querySelectorAll(
+            '#fileList input[type="checkbox"]:checked'
+          );
+          selectedFiles = Array.from(checkboxes).map((cb) =>
+            parseInt(cb.value)
+          );
+
+          if (selectedFiles.length === 0) {
+            addLog("Не выбраны файлы для воспроизведения", "error");
+            return;
+          }
+
+          addLog(`Выбрано файлов: ${selectedFiles.length}`);
+          updateStep(5);
+
+          ipcRenderer.send("files-selected", { selectedFiles });
+        });
+
+      document
+        .getElementById("btnSavePlaylist")
+        .addEventListener("click", () => {
+          ipcRenderer.send("save-playlist", { hash: torrentHash });
+        });
+
+      document.getElementById("btnCopyMagnet").addEventListener("click", () => {
+        ipcRenderer.send("copy-magnet", { magnetUrl });
+      });
+
+      document.getElementById("btnCopyLog").addEventListener("click", () => {
+        copyLogToClipboard();
+      });
+
+      document
+        .getElementById("btnInternalPlayer")
+        .addEventListener("click", () => {
+          addLog("Выбран внутренний плеер (mpv)");
+          updateStep(6);
+          ipcRenderer.send("player-selected", { playerType: "internal" });
+        });
+
+      document
+        .getElementById("btnExternalPlayer")
+        .addEventListener("click", () => {
+          addLog("Выбран внешний плеер");
+          updateStep(6);
+          ipcRenderer.send("player-selected", { playerType: "external" });
+        });
+
+      document
+        .getElementById("btnChoosePlayer")
+        .addEventListener("click", () => {
+          ipcRenderer.send("choose-player-path");
+        });
+
+      ipcRenderer.on("step-progress", (event, data) => {
+        updateStep(data.step);
+        if (data.message) {
+          addLog(data.message, data.type || "info");
+        }
+      });
+
+      ipcRenderer.on("torrent-added", (event, data) => {
+        torrentHash = data.hash;
+        addLog(`Торрент добавлен. Hash: ${data.hash}`, "success");
+        updateStep(3);
+      });
+
+      ipcRenderer.on("files-received", (event, data) => {
+        torrentFiles = data.files;
+        addLog(`Получено файлов: ${data.files.length}`, "success");
+
+        document.getElementById("btnSelectAll").textContent = "Выбрать все";
+
+        const fileList = document.getElementById("fileList");
+        fileList.innerHTML = "";
+
+        data.files.forEach((file, index) => {
+          const fileItem = document.createElement("div");
+          fileItem.className = "file-item";
+
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.value = file.id;
+          checkbox.id = `file-${index}`;
+
+          const fileName = document.createElement("div");
+          fileName.className = "file-name";
+          fileName.textContent = file.path;
+
+          const fileSize = document.createElement("div");
+          fileSize.className = "file-size";
+          fileSize.textContent = formatFileSize(file.length);
+
+          fileItem.appendChild(checkbox);
+          fileItem.appendChild(fileName);
+          fileItem.appendChild(fileSize);
+          fileList.appendChild(fileItem);
+
+          if (data.files.length === 1) {
+            checkbox.checked = true;
+          }
+        });
+
+        if (data.files.length === 1) {
+          setTimeout(() => {
+            document.getElementById("btnSelectFiles").click();
+          }, 500);
+        } else {
+          updateStep(4);
+        }
+      });
+
+      ipcRenderer.on("player-launched", (event, data) => {
+        addLog("Плеер запущен успешно", "success");
+        document
+          .querySelector('.step[data-step="6"]')
+          .classList.remove("active");
+        document
+          .querySelector('.step[data-step="6"]')
+          .classList.add("completed");
+      });
+
+      ipcRenderer.on("error", (event, data) => {
+        addLog(`Ошибка: ${data.message}`, "error");
+        setStepError(currentStep);
+      });
+
+      ipcRenderer.on("player-path-selected", (event, data) => {
+        addLog(`Выбран плеер: ${data.path}`, "success");
+        updateStep(6);
+        ipcRenderer.send("player-selected", {
+          playerType: "custom",
+          path: data.path,
+        });
+      });
+
+      ipcRenderer.on("auto-choose-player", (event, data) => {
+        document.getElementById("btnChoosePlayer").click();
+      });
+
+      function formatFileSize(bytes) {
+        const units = ["B", "KB", "MB", "GB", "TB"];
+        let size = bytes;
+        let unitIndex = 0;
+
+        while (size >= 1024 && unitIndex < units.length - 1) {
+          size /= 1024;
+          unitIndex++;
+        }
+
+        return `${size.toFixed(1)} ${units[unitIndex]}`;
+      }
+
+      function copyLogToClipboard() {
+        const logContainer = document.getElementById("logContainer");
+        const logEntries = logContainer.querySelectorAll(".log-entry");
+
+        let logText = "";
+        logEntries.forEach((entry) => {
+          logText += entry.textContent + "\n";
+        });
+
+        navigator.clipboard
+          .writeText(logText)
+          .then(() => {
+            addLog("Лог скопирован в буфер обмена", "success");
+          })
+          .catch(() => {
+            const textArea = document.createElement("textarea");
+            textArea.value = logText;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand("copy");
+            document.body.removeChild(textArea);
+            addLog("Лог скопирован в буфер обмена (fallback)", "success");
+          });
+      }
+
+      updateStep(1);
+    </script>
+  </body>
+</html>
