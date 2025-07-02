@@ -6,7 +6,7 @@ import Store from 'electron-store';
 import { AppConfig } from './main.js'
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
-import prompt from 'custom-electron-prompt';
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -16,6 +16,7 @@ const APP_NAME = `ReYohoho Torrents ${app.getVersion()}`;
 app.commandLine.appendSwitch('disable-site-isolation-trials');
 let mainWindow: BrowserWindow | null = null;
 let wizardWindow: BrowserWindow | null = null;
+let magnetInputWindow: BrowserWindow | null = null;
 let appConfig: AppConfig | null = null;
 const store = new Store({});
 let userToken: string | null = null;
@@ -122,65 +123,41 @@ function openMagnet(magnetValue: string): void {
 }
 
 function openMagnetInputDialog(): void {
+  if (magnetInputWindow) {
+    magnetInputWindow.focus();
+    return;
+  }
 
-  prompt({
-    skipTaskbar: false,
-    alwaysOnTop: true,
-    title: 'Введите magnet',
-    x: mainWindow!.getBounds().x + mainWindow!.getBounds().width / 2,
-    y: mainWindow!.getBounds().y + mainWindow!.getBounds().height / 2,
-    customStylesheet: 'dark',
-    frame: true,
-    useHtmlLabel: true,
+  magnetInputWindow = new BrowserWindow({
+    width: 500,
     height: 250,
-    multiInputOptions:
-      [
-        {
-          label: "Укажите magnet", value: null, inputAttrs: {
-            type: "text",
-            required: true,
-          }
-        },
-      ],
-    resizable: true,
-    type: 'multiInput'
-  })
-    .then((result: string[] | null) => {
-      if (result === null) {
-        console.log('User cancelled');
-      } else {
-        let userMagnet = result[0];
+    darkTheme: true,
+    backgroundColor: "#1e1e2e",
+    icon: 'icon.png',
+    show: false,
+    parent: mainWindow || undefined,
+    modal: true,
+    frame: false,
+    resizable: false,
+    webPreferences: {
+      contextIsolation: false,
+      nodeIntegration: true,
+      webSecurity: false,
+      devTools: false
+    }
+  });
 
-        mainWindow?.webContents.executeJavaScript(`
-          const watchedTorrents = JSON.parse(localStorage.getItem('watchedTorrents') || '[]');
-          const newEntry = {
-            tracker: "Magnet выбран вручную",
-            url: "Magnet выбран вручную", 
-            title: "${userMagnet}",
-            size: 0,
-            sizeName: "Magnet выбран вручную",
-            createTime: new Date().toISOString(),
-            sid: 0,
-            pir: 0,
-            magnet: "${userMagnet.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}",
-            name: "Magnet выбран вручную",
-            originalname: "Magnet выбран вручную", 
-            relased: new Date().getFullYear(),
-            videotype: "Magnet выбран вручную",
-            quality: 0,
-            voices: ["Magnet выбран вручную"],
-            seasons: [1],
-            types: ["Magnet выбран вручную"],
-            date: Date.now(),
-            dateHuman: new Date().toISOString().split('T')[0]
-          };
-          watchedTorrents.unshift(newEntry);
-          localStorage.setItem('watchedTorrents', JSON.stringify(watchedTorrents));
-        `);
+  magnetInputWindow.setMenu(null);
+  magnetInputWindow.loadFile("magnet-input.html");
 
-        openMagnet(userMagnet);
-      }
-    })
+  magnetInputWindow.once('ready-to-show', () => {
+    magnetInputWindow?.show();
+    magnetInputWindow?.focus();
+  });
+
+  magnetInputWindow.on('closed', () => {
+    magnetInputWindow = null;
+  });
 }
 
 export async function createTorrentsWindow(kpTitle: string, year: string | null, altname: string | null, config: AppConfig, token: string): Promise<void> {
@@ -383,6 +360,48 @@ ipcMain.on('copy-magnet', (event, data) => {
   if (data.magnetUrl) {
     clipboard.writeText(data.magnetUrl);
     logToWizard('Magnet-ссылка скопирована в буфер обмена', 'success');
+  }
+});
+
+ipcMain.on('magnet-input-result', (event, result) => {
+  if (magnetInputWindow) {
+    magnetInputWindow.close();
+    magnetInputWindow = null;
+  }
+
+  if (result === null) {
+    console.log('User cancelled');
+  } else {
+    const userMagnet = result.magnet;
+
+    mainWindow?.webContents.executeJavaScript(`
+      const watchedTorrents = JSON.parse(localStorage.getItem('watchedTorrents') || '[]');
+      const newEntry = {
+        tracker: "Magnet выбран вручную",
+        url: "Magnet выбран вручную", 
+        title: "${userMagnet}",
+        size: 0,
+        sizeName: "Magnet выбран вручную",
+        createTime: new Date().toISOString(),
+        sid: 0,
+        pir: 0,
+        magnet: "${userMagnet.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}",
+        name: "Magnet выбран вручную",
+        originalname: "Magnet выбран вручную", 
+        relased: new Date().getFullYear(),
+        videotype: "Magnet выбран вручную",
+        quality: 0,
+        voices: ["Magnet выбран вручную"],
+        seasons: [1],
+        types: ["Magnet выбран вручную"],
+        date: Date.now(),
+        dateHuman: new Date().toISOString().split('T')[0]
+      };
+      watchedTorrents.unshift(newEntry);
+      localStorage.setItem('watchedTorrents', JSON.stringify(watchedTorrents));
+    `);
+
+    openMagnet(userMagnet);
   }
 });
 

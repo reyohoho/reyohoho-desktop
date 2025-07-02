@@ -17,7 +17,6 @@
   "dependencies": {
     "@ghostery/adblocker-electron": "^2.5.0",
     "cross-fetch": "^4.1.0",
-    "custom-electron-prompt": "github:reyohoho/custom-electron-prompt",
     "electron-store": "^10.0.1",
     "electron-updater": "^6.3.9"
   },
@@ -41,7 +40,10 @@
       "dist/torrents.js",
       "dist/preload.js",
       "package.json",
-      "loader.html"
+      "loader.html",
+      "auth-window.html",
+      "torrent-wizard.html",
+      "magnet-input.html"
     ],
     "protocols": [
       {

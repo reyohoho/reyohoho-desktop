@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Введите magnet</title>
+    <style>
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          sans-serif;
+        background: #1e1e2e;
+        color: #cdd6f4;
+        margin: 0;
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        height: calc(100vh - 40px);
+      }
+
+      .container {
+        background: #313244;
+        border-radius: 8px;
+        padding: 20px;
+        border: 1px solid #45475a;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      h2 {
+        margin: 0 0 20px 0;
+        color: #89b4fa;
+        font-size: 18px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+      }
+
+      input[type="text"] {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #45475a;
+        border-radius: 6px;
+        background: #1e1e2e;
+        color: #cdd6f4;
+        font-size: 14px;
+        box-sizing: border-box;
+      }
+
+      input[type="text"]:focus {
+        outline: none;
+        border-color: #89b4fa;
+        box-shadow: 0 0 0 2px rgba(137, 180, 250, 0.2);
+      }
+
+      .buttons {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+        justify-content: flex-end;
+      }
+
+      button {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        transition: background-color 0.2s;
+      }
+
+      .btn-cancel {
+        background: #45475a;
+        color: #cdd6f4;
+      }
+
+      .btn-cancel:hover {
+        background: #585b70;
+      }
+
+      .btn-ok {
+        background: #89b4fa;
+        color: #1e1e2e;
+      }
+
+      .btn-ok:hover {
+        background: #74c7ec;
+      }
+
+      .btn-ok:disabled {
+        background: #45475a;
+        color: #6c7086;
+        cursor: not-allowed;
+      }
+
+      .error {
+        color: #f38ba8;
+        font-size: 12px;
+        margin-top: 5px;
+      }
+
+      .context-menu {
+        position: fixed;
+        background: #313244;
+        border: 1px solid #45475a;
+        border-radius: 6px;
+        padding: 4px 0;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        z-index: 1000;
+        display: none;
+        min-width: 120px;
+      }
+
+      .context-menu-item {
+        padding: 8px 12px;
+        cursor: pointer;
+        font-size: 14px;
+        color: #cdd6f4;
+        transition: background-color 0.2s;
+      }
+
+      .context-menu-item:hover {
+        background: #45475a;
+      }
+
+      .context-menu-item:disabled,
+      .context-menu-item.disabled {
+        color: #6c7086;
+        cursor: not-allowed;
+      }
+
+      .context-menu-item:disabled:hover,
+      .context-menu-item.disabled:hover {
+        background: transparent;
+      }
+
+      .title-bar {
+        background: #313244;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 15px;
+        margin: -20px -20px 20px -20px;
+        border-bottom: 1px solid #45475a;
+        -webkit-app-region: drag;
+      }
+
+      .title-text {
+        font-size: 14px;
+        font-weight: 500;
+        color: #cdd6f4;
+      }
+
+      .close-button {
+        background: none;
+        border: none;
+        color: #cdd6f4;
+        cursor: pointer;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 16px;
+        -webkit-app-region: no-drag;
+        transition: background-color 0.2s;
+      }
+
+      .close-button:hover {
+        background: #f38ba8;
+        color: #1e1e2e;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="title-bar">
+        <div class="title-text">Введите magnet-ссылку</div>
+        <button class="close-button" id="closeBtn">✕</button>
+      </div>
+
+      <label for="magnetInput">Magnet URL:</label>
+      <input
+        type="text"
+        id="magnetInput"
+        placeholder="magnet:?xt=urn:btih:..."
+        required
+      />
+      <div id="error" class="error" style="display: none"></div>
+
+      <div class="buttons">
+        <button type="button" class="btn-cancel" id="cancelBtn">Отмена</button>
+        <button type="button" class="btn-ok" id="okBtn" disabled>ОК</button>
+      </div>
+    </div>
+
+    <div class="context-menu" id="contextMenu">
+      <div class="context-menu-item" id="cutItem">Вырезать</div>
+      <div class="context-menu-item" id="copyItem">Копировать</div>
+      <div class="context-menu-item" id="pasteItem">Вставить</div>
+      <div class="context-menu-item" id="selectAllItem">Выделить всё</div>
+    </div>
+
+    <script>
+      const { ipcRenderer } = require("electron");
+
+      const magnetInput = document.getElementById("magnetInput");
+      const okBtn = document.getElementById("okBtn");
+      const cancelBtn = document.getElementById("cancelBtn");
+      const closeBtn = document.getElementById("closeBtn");
+      const errorDiv = document.getElementById("error");
+      const contextMenu = document.getElementById("contextMenu");
+      const cutItem = document.getElementById("cutItem");
+      const copyItem = document.getElementById("copyItem");
+      const pasteItem = document.getElementById("pasteItem");
+      const selectAllItem = document.getElementById("selectAllItem");
+
+      function validateMagnet(magnet) {
+        if (!magnet.trim()) {
+          return "Введите magnet-ссылку";
+        }
+        if (!magnet.startsWith("magnet:")) {
+          return 'Magnet-ссылка должна начинаться с "magnet:"';
+        }
+        return null;
+      }
+
+      function updateValidation() {
+        const magnet = magnetInput.value;
+        const error = validateMagnet(magnet);
+
+        if (error) {
+          errorDiv.textContent = error;
+          errorDiv.style.display = "block";
+          okBtn.disabled = true;
+        } else {
+          errorDiv.style.display = "none";
+          okBtn.disabled = false;
+        }
+      }
+
+      magnetInput.addEventListener("input", updateValidation);
+      magnetInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter" && !okBtn.disabled) {
+          handleOk();
+        }
+      });
+
+      function handleOk() {
+        const magnet = magnetInput.value.trim();
+        const error = validateMagnet(magnet);
+
+        if (!error) {
+          ipcRenderer.send("magnet-input-result", { magnet });
+        }
+      }
+
+      function handleCancel() {
+        ipcRenderer.send("magnet-input-result", null);
+      }
+
+      okBtn.addEventListener("click", handleOk);
+      cancelBtn.addEventListener("click", handleCancel);
+      closeBtn.addEventListener("click", handleCancel);
+
+      magnetInput.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        showContextMenu(e.pageX, e.pageY);
+      });
+
+      document.addEventListener("click", (e) => {
+        if (!contextMenu.contains(e.target)) {
+          hideContextMenu();
+        }
+      });
+
+      function showContextMenu(x, y) {
+        const hasSelection =
+          magnetInput.selectionStart !== magnetInput.selectionEnd;
+        const hasText = magnetInput.value.length > 0;
+
+        cutItem.classList.toggle("disabled", !hasSelection);
+        copyItem.classList.toggle("disabled", !hasSelection);
+        selectAllItem.classList.toggle("disabled", !hasText);
+
+        contextMenu.style.left = x + "px";
+        contextMenu.style.top = y + "px";
+        contextMenu.style.display = "block";
+      }
+
+      function hideContextMenu() {
+        contextMenu.style.display = "none";
+      }
+
+      cutItem.addEventListener("click", () => {
+        if (!cutItem.classList.contains("disabled")) {
+          const start = magnetInput.selectionStart;
+          const end = magnetInput.selectionEnd;
+          const selectedText = magnetInput.value.substring(start, end);
+
+          navigator.clipboard.writeText(selectedText);
+          magnetInput.value =
+            magnetInput.value.substring(0, start) +
+            magnetInput.value.substring(end);
+          magnetInput.setSelectionRange(start, start);
+          updateValidation();
+        }
+        hideContextMenu();
+      });
+
+      copyItem.addEventListener("click", () => {
+        if (!copyItem.classList.contains("disabled")) {
+          const start = magnetInput.selectionStart;
+          const end = magnetInput.selectionEnd;
+          const selectedText = magnetInput.value.substring(start, end);
+          navigator.clipboard.writeText(selectedText);
+        }
+        hideContextMenu();
+      });
+
+      pasteItem.addEventListener("click", async () => {
+        try {
+          const text = await navigator.clipboard.readText();
+          const start = magnetInput.selectionStart;
+          const end = magnetInput.selectionEnd;
+
+          magnetInput.value =
+            magnetInput.value.substring(0, start) +
+            text +
+            magnetInput.value.substring(end);
+          magnetInput.setSelectionRange(
+            start + text.length,
+            start + text.length
+          );
+          updateValidation();
+        } catch (err) {
+          console.error("Failed to read clipboard:", err);
+        }
+        hideContextMenu();
+      });
+
+      selectAllItem.addEventListener("click", () => {
+        if (!selectAllItem.classList.contains("disabled")) {
+          magnetInput.select();
+        }
+        hideContextMenu();
+      });
+
+      window.addEventListener("DOMContentLoaded", () => {
+        magnetInput.focus();
+      });
+    </script>
+  </body>
+</html>

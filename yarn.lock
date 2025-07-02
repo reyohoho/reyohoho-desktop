@@ -79,9 +79,9 @@
   optionalDependencies:
     global-agent "^3.0.0"
 
-"@electron/node-gyp@git+https://github.com/electron/node-gyp.git#06b29aafb7708acef8b3669835c8a7857ebc92d2":
+"@electron/node-gyp@https://github.com/electron/node-gyp#06b29aafb7708acef8b3669835c8a7857ebc92d2":
   version "10.2.0-electron.1"
-  resolved "git+https://github.com/electron/node-gyp.git#06b29aafb7708acef8b3669835c8a7857ebc92d2"
+  resolved "https://github.com/electron/node-gyp#06b29aafb7708acef8b3669835c8a7857ebc92d2"
   dependencies:
     env-paths "^2.2.0"
     exponential-backoff "^3.1.1"
@@ -1028,10 +1028,6 @@ cross-spawn@^7.0.1, cross-spawn@^7.0.6:
     path-key "^3.1.0"
     shebang-command "^2.0.0"
     which "^2.0.1"
-
-"custom-electron-prompt@github:reyohoho/custom-electron-prompt":
-  version "1.5.8"
-  resolved "https://codeload.github.com/reyohoho/custom-electron-prompt/tar.gz/6003f02f378a7a515f37537f38cb0ceebc4d1885"
 
 debounce-fn@^6.0.0:
   version "6.0.0"

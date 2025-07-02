@@ -2,7 +2,6 @@ import { ElectronBlocker } from '@ghostery/adblocker-electron';
 import fetch from 'cross-fetch';
 import { app, BrowserWindow, dialog, session, globalShortcut, shell, screen, Menu, ipcMain, Rectangle } from 'electron';
 import { createTorrentsWindow } from './torrents.js'
-import prompt from 'custom-electron-prompt';
 import Store from 'electron-store';
 import pkg from 'electron-updater';
 import path from "node:path";
@@ -33,7 +32,8 @@ if (process.platform === 'darwin') {
 let main_site_url;
 let deep_link_data: String | null;
 
-let compressorButtonEnabled = true;
+let authWindow: BrowserWindow | null = null;
+
 const menu = (isMacOS = process.platform === 'darwin'): Menu => {
   if (isMacOS) {
     return Menu.buildFromTemplate([
@@ -61,8 +61,7 @@ const menu = (isMacOS = process.platform === 'darwin'): Menu => {
             click: () => switchBlurVideo()
           },
           {
-            label: compressorButtonEnabled ? "Компрессор (F3)" : "Компрессор недоступен",
-            enabled: compressorButtonEnabled,
+            label: "Компрессор (F3)",
             click: () => switchCompressor()
           },
           {
@@ -117,8 +116,7 @@ const menu = (isMacOS = process.platform === 'darwin'): Menu => {
         click: () => switchBlurVideo()
       },
       {
-        label: compressorButtonEnabled ? "Компрессор (F3)" : "Компрессор недоступен",
-        enabled: compressorButtonEnabled,
+        label: "Компрессор (F3)",
         click: () => switchCompressor()
       },
       {
@@ -205,60 +203,20 @@ async function openTorrents() {
 
     createTorrentsWindow(title, year, altName, appConfig!, base64Credentials);
   } else {
-    prompt({
-      skipTaskbar: false,
-      alwaysOnTop: true,
-      title: 'Авторизация',
-      height: 350,
-      width: 500,
-      x: mainWindow!.getBounds().x + mainWindow!.getBounds().width / 2,
-      y: mainWindow!.getBounds().y + mainWindow!.getBounds().height / 2,
-      customStylesheet: 'dark',
-      frame: true,
-      useHtmlLabel: true,
-      label: `Просмотр торрентов без скачки через сервер ReYohoho<br>
-      Пример работы<a target="_blank" href="https://storage.yandexcloud.net/miscrhhhh/2025-02-07%2010-43-11.mp4" style="color: inherit;">(видео)</a><br>
-      Введите логин и пароль ReYohoho VIP<br>
-      Данные можно получить по подписке на <a target="_blank" href="${appConfig!.boosty_vip_link}" style="color: inherit;">бусти</a><br>`,
-      multiInputOptions:
-        [
-          {
-            label: "Login", value: store.get('login', '') as string, inputAttrs: {
-              type: "text",
-              required: true,
-            }
-          },
-          {
-            label: "Password", value: store.get('password', '') as string, inputAttrs: {
-              type: "password",
-              required: true,
-            }
-          },
-        ],
-      resizable: true,
-      type: 'multiInput'
-    })
-      .then(async (result: string[] | null) => {
-        if (result === null) {
-          console.log('User cancelled');
-        } else {
-          const login = result[0];
-          const password = result[1];
-          const credentials = `${login}:${password}`;
-          store.set("login", login);
-          store.set("password", password);
-          const base64Credentials = Buffer.from(credentials).toString("base64");
-          isNewCredsStored = true;
-          const titleAndYear = await getMetaContent('title-and-year');
-          const altName = await getMetaContent('original-title');
+    const authResult = await createAuthWindow();
 
-          const match = titleAndYear.match(/^(.*?)\s*\((\d{4})\)$/);
-          const title = match ? match[1].trim() : titleAndYear.replace(/\s*\(.*\)$/, "");
-          const year = match ? match[2] : null;
+    if (authResult) {
+      const credentials = `${authResult.login}:${authResult.password}`;
+      const base64Credentials = Buffer.from(credentials).toString("base64");
+      const titleAndYear = await getMetaContent('title-and-year');
+      const altName = await getMetaContent('original-title');
 
-          createTorrentsWindow(title, year, altName, appConfig!, base64Credentials);
-        }
-      })
+      const match = titleAndYear.match(/^(.*?)\s*\((\d{4})\)$/);
+      const title = match ? match[1].trim() : titleAndYear.replace(/\s*\(.*\)$/, "");
+      const year = match ? match[2] : null;
+
+      createTorrentsWindow(title, year, altName, appConfig!, base64Credentials);
+    }
   }
 };
 
@@ -275,75 +233,7 @@ const switchBlurVideo = (): void => {
 };
 
 const switchCompressor = (): void => {
-  if (!compressorButtonEnabled) {
-    const compressorUnavailableMessage = `
-      function showToast(message) {
-        const messageElement = document.createElement('div');
-        messageElement.textContent = message;
-        messageElement.style.position = 'fixed';
-        messageElement.style.top = '0';
-        messageElement.style.left = '0';
-        messageElement.style.width = '100%';
-        messageElement.style.height = '100%';
-        messageElement.style.backgroundColor = 'rgba(0, 0, 0, 0.8)';
-        messageElement.style.color = 'white';
-        messageElement.style.display = 'flex';
-        messageElement.style.justifyContent = 'center';
-        messageElement.style.alignItems = 'center';
-        messageElement.style.fontSize = '2rem';
-        messageElement.style.zIndex = '99000';
-
-        document.body.appendChild(messageElement);
-
-        setTimeout(() => {
-            document.body.removeChild(messageElement);
-        }, 500);
-    }
-    showToast("Компрессор недоступен в этом плеере");
-    `;
-    mainWindow?.webContents.executeJavaScript(compressorUnavailableMessage);
-    return;
-  }
-  const switchCompressorScript = `
-  try {
-      if (!csource) {
-          video_iframe = document.getElementsByClassName('responsive-iframe')[0].contentDocument.querySelectorAll('video')[0];
-          contextC = new AudioContext();
-          compressor = contextC.createDynamicsCompressor();
-          compressor.threshold.value = -50;
-          compressor.knee.value = 40;
-          compressor.ratio.value = 12;
-          compressor.attack.value = 0;
-          compressor.release.value = 0.25;
-          csource = contextC.createMediaElementSource(video_iframe);
-          csource.connect(contextC.destination);
-      }
-  } catch (e) {
-      console.log(e);
-      window.electronAPI.showToast("Ошибка при включении компрессора");
-  }
-
-  try {
-      if (!isCompressorEnabled) {
-          csource.disconnect(contextC.destination);
-          csource.connect(compressor);
-          compressor.connect(contextC.destination);
-          isCompressorEnabled = true;
-          window.electronAPI.showToast("Компрессор включён");
-      } else {
-          csource.disconnect(compressor);
-          compressor.disconnect(contextC.destination);
-          csource.connect(contextC.destination);
-          isCompressorEnabled = false;
-          window.electronAPI.showToast("Компрессор отключён");
-      }
-  } catch (e) {
-      console.log(e);
-      window.electronAPI.showToast("Ошибка при включении компрессора");
-  }
-  `;
-
-  mainWindow?.webContents.executeJavaScript(switchCompressorScript);
+  mainWindow?.webContents.executeJavaScript('window.toggleCompressor();');
 };
 
 const increasePlaybackSpeed = (): void => {
@@ -381,18 +271,7 @@ const resetPlaybackSpeed = (): void => {
 };
 
 const switchMirror = (): void => {
-  const switchMirrorScript = `
-        video_iframe = document.getElementsByClassName('responsive-iframe')[0].contentDocument.querySelectorAll('video')[0];
-        if (video_iframe.style.transform === '' || video_iframe.style.transform === 'scaleX(1)' || video_iframe.style.transform === 'scale(1)') {
-            video_iframe.style.transform = 'scaleX(-1)';
-            window.electronAPI.showToast("Зеркало включено");
-        } else {
-            video_iframe.style.transform = 'scaleX(1)';
-          window.electronAPI.showToast("Зеркало отключёно");
-        }
-  `;
-
-  mainWindow?.webContents.executeJavaScript(switchMirrorScript);
+  mainWindow?.webContents.executeJavaScript('window.toggleMirror();');
 };
 
 if (!AbortSignal.timeout) {
@@ -466,48 +345,25 @@ function registerHotkeys(): void {
 }
 
 function changeWebUrlMirror(): void {
-  prompt({
-    skipTaskbar: false,
-    alwaysOnTop: true,
-    title: 'Укажите путь к зеркалу:',
-    x: mainWindow!.getBounds().x + mainWindow!.getBounds().width / 2,
-    y: mainWindow!.getBounds().y + mainWindow!.getBounds().height / 2,
-    customStylesheet: 'dark',
-    frame: true,
-    useHtmlLabel: true,
-    height: 250,
-    label: `Список зеркал: <a target="_blank" href="https://reyohoho.ru/m.json">открыть</a><br>`,
-    multiInputOptions:
-      [
-        {
-          label: "По умолчанию", value: appConfig!.main_site_url, inputAttrs: {
-            type: "text",
-            required: false,
-          }
-        },
-        {
-          label: "Текущее зеркало", value: store.get('user_mirror', appConfig!.main_site_url) as string, inputAttrs: {
-            type: "text",
-            required: true,
-          }
-        },
-      ],
-    resizable: true,
-    type: 'multiInput'
-  })
-    .then((result: string[] | null) => {
-      if (result === null) {
-        console.log('User cancelled');
-      } else {
-        let user_mirror = result[1];
-        if (!user_mirror.startsWith('http')) {
-          user_mirror = `https://${user_mirror}`;
-        }
-        store.set("user_mirror", user_mirror);
-        main_site_url = user_mirror;
-        mainWindow?.loadURL(user_mirror);
-      }
-    })
+  if (!mainWindow) return;
+
+  dialog.showMessageBox(mainWindow, {
+    type: 'question',
+    title: 'Сменить URL зеркала',
+    message: 'Выберите действие:',
+    detail: `Текущее зеркало: ${store.get('user_mirror', appConfig!.main_site_url) as string}\nСписок зеркал: https://reyohoho.ru/m.json`,
+    buttons: ['Отмена', 'Сбросить на умолчание', 'Открыть список зеркал'],
+    defaultId: 0,
+    cancelId: 0
+  }).then((result) => {
+    if (result.response === 1) {
+      store.set("user_mirror", appConfig!.main_site_url);
+      main_site_url = appConfig!.main_site_url;
+      mainWindow?.loadURL(main_site_url);
+    } else if (result.response === 2) {
+      shell.openExternal('https://reyohoho.ru/m.json');
+    }
+  });
 }
 
 async function createWindow(configError: any | ''): Promise<void> {
@@ -595,11 +451,6 @@ async function createWindow(configError: any | ''): Promise<void> {
 
   mainWindow.webContents.on('did-start-loading', () => {
     mainWindow?.setTitle(APP_NAME + ' Loading ....');
-    const initCompressor = `
-    var isCompressorEnabled = false;
-    var csource = null;
-    `
-    mainWindow?.webContents.executeJavaScript(initCompressor)
   });
 
   mainWindow.webContents.on('did-stop-loading', () => {
@@ -609,12 +460,6 @@ async function createWindow(configError: any | ''): Promise<void> {
   blocker?.enableBlockingInSession(mainWindow.webContents.session);
 
   mainWindow?.webContents.on('did-finish-load', () => {
-    const initCompressor = `
-    var isCompressorEnabled = false;
-    var csource = null;
-    `
-    mainWindow?.webContents.executeJavaScript(initCompressor);
-
     mainWindow?.webContents.insertCSS(`
       ::-webkit-scrollbar {
         width: 5px;
@@ -712,36 +557,6 @@ async function createWindow(configError: any | ''): Promise<void> {
     }
   });
 
-  executeRepeatedly(() => {
-    mainWindow?.webContents.executeJavaScript(`
-      var iframe = document.getElementsByClassName('responsive-iframe')[0];
-      if (iframe && iframe.contentDocument) {
-        var video = iframe.contentDocument.querySelectorAll('video')[0];
-        video ? video.src : null;
-      } else {
-        null;
-      }
-    `)
-      .then(result => {
-        if (result != null && (result.includes("allarknow") || result.includes("videoframe") || result.includes("kinoserial.net"))) {
-          compressorButtonEnabled = false;
-          if (process.platform !== 'darwin') {
-            mainWindow?.setMenu(menu());
-          }
-        } else {
-          compressorButtonEnabled = true;
-          if (process.platform !== 'darwin') {
-            mainWindow?.setMenu(menu());
-          }
-        }
-      }).catch(error => {
-        compressorButtonEnabled = true;
-        if (process.platform !== 'darwin') {
-          mainWindow?.setMenu(menu());
-        }
-      });
-  }, 1000);
-
   mainWindow?.on('enter-full-screen', () => {
     mainWindow?.setMenuBarVisibility(false);
   });
@@ -756,8 +571,116 @@ function executeRepeatedly(callback: () => void, interval: number): void {
   setInterval(callback, interval);
 }
 
+function createAuthWindow(): Promise<{ login: string; password: string } | null> {
+  return new Promise((resolve) => {
+    if (authWindow) {
+      authWindow.focus();
+      return;
+    }
+
+    authWindow = new BrowserWindow({
+      width: 480,
+      height: 520,
+      resizable: false,
+      maximizable: false,
+      minimizable: false,
+      alwaysOnTop: true,
+      modal: true,
+      parent: mainWindow!,
+      show: false,
+      frame: false,
+      transparent: true,
+      backgroundColor: '#00000000',
+      icon: 'icon.png',
+      webPreferences: {
+        nodeIntegration: true,
+        contextIsolation: false,
+      }
+    });
+
+    const handleShowInputContextMenu = () => {
+      if (authWindow) {
+        const InputMenu = Menu.buildFromTemplate([
+          { label: 'Вырезать', role: 'cut' },
+          { label: 'Копировать', role: 'copy' },
+          { label: 'Вставить', role: 'paste' },
+          { type: 'separator' },
+          { label: 'Выделить все', role: 'selectAll' },
+        ]);
+        InputMenu.popup({ window: authWindow });
+      }
+    };
+
+    const handleAuthSubmitted = (event: any, data: { login: string; password: string }) => {
+      store.set("login", data.login);
+      store.set("password", data.password);
+      isNewCredsStored = true;
+
+      if (authWindow) {
+        authWindow.close();
+        authWindow = null;
+      }
+
+      ipcMain.removeListener('auth-submitted', handleAuthSubmitted);
+      ipcMain.removeListener('auth-cancelled', handleAuthCancelled);
+      ipcMain.removeListener('show-input-context-menu', handleShowInputContextMenu);
+
+      resolve(data);
+    };
+
+    const handleAuthCancelled = () => {
+      if (authWindow) {
+        authWindow.close();
+        authWindow = null;
+      }
+
+      ipcMain.removeListener('auth-submitted', handleAuthSubmitted);
+      ipcMain.removeListener('auth-cancelled', handleAuthCancelled);
+      ipcMain.removeListener('show-input-context-menu', handleShowInputContextMenu);
+
+      resolve(null);
+    };
+
+    ipcMain.on('auth-submitted', handleAuthSubmitted);
+    ipcMain.on('auth-cancelled', handleAuthCancelled);
+
+    ipcMain.on('show-input-context-menu', handleShowInputContextMenu);
+
+    authWindow.on('closed', () => {
+      authWindow = null;
+      ipcMain.removeListener('auth-submitted', handleAuthSubmitted);
+      ipcMain.removeListener('auth-cancelled', handleAuthCancelled);
+      ipcMain.removeListener('show-input-context-menu', handleShowInputContextMenu);
+      resolve(null);
+    });
+
+    authWindow.loadFile('auth-window.html');
+
+    authWindow.once('ready-to-show', () => {
+      authWindow?.show();
+      authWindow?.focus();
+    });
+  });
+}
+
 app.whenReady().then(() => {
   app.setAsDefaultProtocolClient('reyohoho');
+
+  ipcMain.handle('get-stored-credentials', () => {
+    return {
+      login: store.get('login', '') as string,
+      password: store.get('password', '') as string
+    };
+  });
+
+  ipcMain.handle('get-app-config', () => {
+    return appConfig;
+  });
+
+  ipcMain.handle('open-external', (event, url) => {
+    shell.openExternal(url);
+  });
+
   loadConfig(config_main_url);
   registerHotkeys();
 
@@ -780,15 +703,11 @@ app.on('web-contents-created', (e, wc) => {
   wc.setWindowOpenHandler((handler) => {
     try {
       console.log("setWindowOpenHandler: " + handler.url);
-      if (BrowserWindow.getAllWindows()[0] && BrowserWindow.getAllWindows()[0].getTitle() === "Авторизация") {
-        BrowserWindow.getAllWindows()[0].close();
-      }
-      if (BrowserWindow.getAllWindows()[1] && BrowserWindow.getAllWindows()[1].getTitle() === "Авторизация") {
-        BrowserWindow.getAllWindows()[1].close();
-      }
-      if (BrowserWindow.getAllWindows()[2] && BrowserWindow.getAllWindows()[2].getTitle() === "Авторизация") {
-        BrowserWindow.getAllWindows()[2].close();
-      }
+      BrowserWindow.getAllWindows().forEach(win => {
+        if (win.getTitle() === "Авторизация") {
+          win.close();
+        }
+      });
     } catch (e) { }
 
     if (handler.url.startsWith(appConfig!.url_handler_deny)) {
