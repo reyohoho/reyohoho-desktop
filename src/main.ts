@@ -222,10 +222,20 @@ async function openTorrents() {
 
 const switchBlurVideo = (): void => {
   const switchBlurScript = `
-   if(document.getElementsByClassName('responsive-iframe')[0].style.filter.includes('blur')) {
-    document.getElementsByClassName('responsive-iframe')[0].style.filter = '';
-   } else {
-    document.getElementsByClassName('responsive-iframe')[0].style.filter = 'blur(50px)';
+   try {
+     const video = document.getElementsByClassName('responsive-iframe')[0].contentDocument.querySelectorAll('video')[0];
+     if(video.style.filter.includes('blur')) {
+       video.style.filter = '';
+     } else {
+       video.style.filter = 'blur(50px)';
+     }
+   } catch (error) {
+     const iframe = document.getElementsByClassName('responsive-iframe')[0];
+     if(iframe.style.filter.includes('blur')) {
+       iframe.style.filter = '';
+     } else {
+       iframe.style.filter = 'blur(50px)';
+     }
    }
    `;
 
