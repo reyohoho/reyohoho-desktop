@@ -22,7 +22,7 @@
   },
   "scripts": {
     "build": "tsc && cp src/preload.js dist/preload.js",
-    "start": "yarn build && electron .",
+    "start": "yarn build && cp -r prebuilts dist/prebuilts && electron .",
     "build:win": "rm -rf ./dist && yarn build && electron-builder --win --publish=never",
     "build:mac": "rm -rf ./dist && yarn build && electron-builder --mac --x64 --arm64 --publish=never",
     "build:linux": "rm -rf ./dist && yarn build && electron-builder --linux --publish=never"
@@ -44,7 +44,9 @@
       "auth-window.html",
       "torrent-wizard.html",
       "magnet-input.html",
-      "mirror-selection.html"
+      "mirror-selection.html",
+      "prebuilts/config.json",
+      "prebuilts/adblock.txt"
     ],
     "protocols": [
       {
@@ -63,19 +65,47 @@
         {
           "from": "prebuilts/windows/player",
           "to": "resources/app/dist/prebuilts/windows/player"
+        },
+        {
+          "from": "prebuilts/config.json",
+          "to": "resources/app/prebuilts/config.json"
+        },
+        {
+          "from": "prebuilts/adblock.txt",
+          "to": "resources/app/prebuilts/adblock.txt"
         }
       ]
     },
     "mac": {
       "asar": false,
       "target": "dmg",
-      "artifactName": "ReYohoho.Setup.${version}_${arch}.${ext}"
+      "artifactName": "ReYohoho.Setup.${version}_${arch}.${ext}",
+      "extraFiles": [
+        {
+          "from": "prebuilts/config.json",
+          "to": "resources/app/prebuilts/config.json"
+        },
+        {
+          "from": "prebuilts/adblock.txt",
+          "to": "resources/app/prebuilts/adblock.txt"
+        }
+      ]
     },
     "linux": {
       "asar": false,
       "target": "AppImage",
       "artifactName": "ReYohoho.Setup.${version}_${arch}.${ext}",
       "category": "AudioVideo",
+      "extraFiles": [
+        {
+          "from": "prebuilts/config.json",
+          "to": "resources/app/prebuilts/config.json"
+        },
+        {
+          "from": "prebuilts/adblock.txt",
+          "to": "resources/app/prebuilts/adblock.txt"
+        }
+      ],
       "desktop": {
         "entry": {
           "Name": "ReYohoho",

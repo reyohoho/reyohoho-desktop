@@ -7,6 +7,7 @@ import pkg from 'electron-updater';
 import path from "node:path";
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
+import fs from 'fs';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -22,7 +23,8 @@ const store = new Store({});
 
 const isDebug = !app.isPackaged;
 
-const config_main_url = `https://reyohoho.ru/r.json?t=${Math.random()}`;
+const config_main_path = path.join(__dirname, '../prebuilts/config.json');
+const adblock_path = path.join(__dirname, '../prebuilts/adblock.txt');
 
 autoUpdater.autoInstallOnAppQuit = true;
 if (process.platform === 'darwin') {
@@ -310,33 +312,31 @@ export interface AppConfig {
   torr_server_locations: string[],
 }
 
-function loadConfig(config_url: string): void {
-  fetch(config_url)
-    .then(response => response.json() as Promise<AppConfig>)
-    .then(data => {
-      appConfig = data;
+function loadConfig(): void {
+  try {
+    const configRaw = fs.readFileSync(config_main_path, 'utf-8');
+    appConfig = JSON.parse(configRaw);
 
-      const filter = {
-        urls: ['*://*/*']
-      };
+    const filter = {
+      urls: ['*://*/*']
+    };
 
-      session.defaultSession.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
-        try {
-          if (details.requestHeaders['Referer'] && details.requestHeaders['Referer'].includes(appConfig!.alloha_referer)) {
-            details.requestHeaders['Origin'] = appConfig!.alloha_origin_url;
-          }
-          callback({ requestHeaders: details.requestHeaders });
-        } catch (e) {
-          console.error('Error in onBeforeSendHeaders:', e);
+    session.defaultSession.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
+      try {
+        if (details.requestHeaders['Referer'] && details.requestHeaders['Referer'].includes(appConfig!.alloha_referer)) {
+          details.requestHeaders['Origin'] = appConfig!.alloha_origin_url;
         }
-      });
-
-      createWindow('132');
-    })
-    .catch(error => {
-      console.error('Error load config:', error);
-      createWindow(error);
+        callback({ requestHeaders: details.requestHeaders });
+      } catch (e) {
+        console.error('Error in onBeforeSendHeaders:', e);
+      }
     });
+
+    createWindow('132');
+  } catch (error) {
+    console.error('Error load config:', error);
+    createWindow(error);
+  }
 }
 
 function registerHotkeys(): void {
@@ -501,11 +501,9 @@ async function createWindow(configError: any | ''): Promise<void> {
   autoUpdater.checkForUpdatesAndNotify();
 
   let blocker = null;
-
   try {
-    blocker = await ElectronBlocker.fromLists(fetch, [
-      appConfig!.ad_block_url
-    ]);
+    const adblockRaw = fs.readFileSync(adblock_path, 'utf-8');
+    blocker = ElectronBlocker.parse(adblockRaw);
   } catch (e) {
     console.log(e);
     if (mainWindow != null) {
@@ -754,7 +752,23 @@ app.whenReady().then(() => {
     shell.openExternal(url);
   });
 
-  loadConfig(config_main_url);
+  ipcMain.handle('get-mirrors-list', () => {
+    return `Проверить доступность:
+http://37.252.0.116:4433/check.html
+
+Новый фронтенд:
+https://reyohoho-gitlab.vercel.app/
+https://reyohoho.gitlab.io/reyohoho/
+https://reyohoho.serv00.net/
+https://reyohoho.onrender.com/
+
+Старый фронтенд:
+https://reyohoho.vercel.app/
+https://reyohoho.surge.sh/
+`;
+  });
+
+  loadConfig();
   registerHotkeys();
 
   if (process.platform === 'win32' || process.platform === 'linux') {

@@ -1,0 +1,26 @@
+{
+  "ad_block_url": "https://gist.githubusercontent.com/reyohoho/0f610dc411c8118a3f14f559113bdf5f/raw/fc7cf88ed45bfade8721d349d74839d7c02d3606/gistfile1.txt",
+  "main_site_url": "https://reyohoho-gitlab.vercel.app",
+  "torrent_parser_url": "https://reyohoho.space:9118/",
+  "torr_server_url": "https://reyohoho.space:5557/",
+  "app_version_url": "https://gitlab.com/-/snippets/4805214/raw/main/snippetfile1.txt",
+  "alloha_origin_url": "https://attractive-as.allarknow.online/",
+  "alloha_cdn_filter_url": "https://*.video-ik-ok-ii.*/*",
+  "alloha_referer": "allarknow",
+  "lumex_origin_url": "https://p.lumex.space",
+  "lumex_referer": "lumex",
+  "lumex_cdn_filter_url": "https://*.lumex.space/*",
+  "url_handler_deny": "https://reyohoho.",
+  "boosty_vip_link": "",
+  "api_domain": "https://rh.aukus.su",
+  "torr_server_urls": [
+    "https://trsrv1.reyohoho.space/",
+    "https://trsrv2.reyohoho.space/",
+    "https://streamers.reyohoho.space/"
+  ],
+  "torr_server_locations": [
+    "Москва",
+    "Румыния",
+    "Москва(Стримеры)"
+  ]
+}

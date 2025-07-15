@@ -226,6 +226,18 @@
             Посмотреть список зеркал
           </button>
         </div>
+        <pre
+          id="mirrorsPopup"
+          style="
+            display: none;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 12px;
+            border-radius: 8px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+          "
+        ></pre>
       </div>
 
       <div class="buttons">
@@ -281,8 +293,15 @@
         }
       }
 
-      function showMirrorsList() {
-        ipcRenderer.invoke("open-external", "https://reyohoho.ru/m.json");
+      async function showMirrorsList() {
+        const popup = document.getElementById("mirrorsPopup");
+        if (popup.style.display === "block") {
+          popup.style.display = "none";
+          return;
+        }
+        const mirrors = await ipcRenderer.invoke("get-mirrors-list");
+        popup.textContent = mirrors || "Нет данных";
+        popup.style.display = "block";
       }
 
       function cancel() {
