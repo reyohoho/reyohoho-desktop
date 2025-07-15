@@ -29,19 +29,47 @@ const videoExtensions = [".webm", ".mkv", ".flv", ".vob", ".ogv", ".ogg", ".rrc"
   ".mpg", ".mp2", ".mpeg", ".mpe", ".mpv", ".m4v", ".svi", ".3gp", ".3g2", ".mxf", ".roq", ".nsv",
   ".flv", ".f4v", ".f4p", ".f4a", ".f4b", ".mod", ".m2ts"];
 
-const menu = Menu.buildFromTemplate([
-  {
-    label: 'Настройки',
-    submenu: [
-      {
-        label: 'Указать magnet вручную',
-        click: () => {
-          openMagnetInputDialog();
+function createMenu(): Menu {
+  const selectedParser = store.get('selected_torrent_parser', 'primary') as string;
+
+  return Menu.buildFromTemplate([
+    {
+      label: 'Настройки',
+      submenu: [
+        {
+          label: 'Указать magnet вручную',
+          click: () => {
+            openMagnetInputDialog();
+          }
+        },
+        {
+          type: 'separator'
+        },
+        {
+          label: 'Торрент парсер',
+          submenu: [
+            {
+              label: 'Основной (reyohoho.space)',
+              type: 'radio',
+              checked: selectedParser === 'primary',
+              click: () => {
+                switchTorrentParser('primary');
+              }
+            },
+            {
+              label: 'Альтернативный (rhhhhhhh.live)',
+              type: 'radio',
+              checked: selectedParser === 'alternative',
+              click: () => {
+                switchTorrentParser('alternative');
+              }
+            }
+          ]
         }
-      }
-    ]
-  }
-]);
+      ]
+    }
+  ]);
+}
 
 if (!AbortSignal.timeout) {
   AbortSignal.timeout = function timeout(ms: number): AbortSignal {
@@ -160,6 +188,37 @@ function openMagnetInputDialog(): void {
   });
 }
 
+function switchTorrentParser(parserType: 'primary' | 'alternative'): void {
+  const currentParser = store.get('selected_torrent_parser', 'primary') as string;
+
+  if (currentParser === parserType) {
+    return;
+  }
+
+  store.set('selected_torrent_parser', parserType);
+
+  const parserUrl = parserType === 'primary'
+    ? appConfig!.torrent_parser_url
+    : appConfig!.torrent_parser_url2;
+
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.loadURL(`${parserUrl}/index3.html?rand=${Date.now()}`);
+
+    if (process.platform !== 'darwin') {
+      mainWindow.setMenu(createMenu());
+    } else {
+      Menu.setApplicationMenu(createMenu());
+    }
+  }
+}
+
+function getCurrentTorrentParserUrl(): string {
+  const selectedParser = store.get('selected_torrent_parser', 'primary') as string;
+  return selectedParser === 'primary'
+    ? appConfig!.torrent_parser_url
+    : appConfig!.torrent_parser_url2;
+}
+
 export async function createTorrentsWindow(kpTitle: string, year: string | null, altname: string | null, config: AppConfig, token: string): Promise<void> {
   appConfig = config;
   selectedTorrServerUrl = config.torr_server_urls[0];
@@ -202,12 +261,12 @@ export async function createTorrentsWindow(kpTitle: string, year: string | null,
   setupButtons(kpTitle, year, altname);
 
   if (process.platform !== 'darwin') {
-    mainWindow?.setMenu(menu);
+    mainWindow?.setMenu(createMenu());
   } else {
-    Menu.setApplicationMenu(menu);
+    Menu.setApplicationMenu(createMenu());
   }
 
-  mainWindow?.loadURL(`${appConfig!.torrent_parser_url}/index3.html?rand=${Date.now()}`);
+  mainWindow?.loadURL(`${getCurrentTorrentParserUrl()}/index3.html?rand=${Date.now()}`);
 
   mainWindow.on('closed', function () {
     mainWindow = null

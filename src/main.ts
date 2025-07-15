@@ -295,11 +295,9 @@ if (!AbortSignal.timeout) {
 }
 
 export interface AppConfig {
-  ad_block_url: string,
   main_site_url: string,
   torrent_parser_url: string,
-  torr_server_url: string,
-  app_version_url: string,
+  torrent_parser_url2: string,
   alloha_origin_url: string,
   alloha_referer: string,
   alloha_cdn_filter_url: string,
@@ -307,7 +305,6 @@ export interface AppConfig {
   lumex_referer: string,
   lumex_cdn_filter_url: string,
   url_handler_deny: string,
-  boosty_vip_link: string,
   torr_server_urls: string[],
   torr_server_locations: string[],
 }
