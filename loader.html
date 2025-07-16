@@ -76,6 +76,35 @@
     </style>
 </head>
 <div class="stars"></div>
+<div id="loader-action" style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:100000;background:#222;padding:24px 32px;border-radius:12px;font-size:1.3rem;color:#fff;box-shadow:0 2px 16px #000a;text-align:center;">
+  <button id="loader-btn" style="font-size:1.1rem;padding:8px 18px;border-radius:8px;border:none;background:#3a6df0;color:#fff;cursor:pointer;">...</button>
+</div>
+<script>
+setTimeout(function() {
+  var action = document.getElementById('loader-action');
+  var btn = document.getElementById('loader-btn');
+  action.style.display = '';
+  if (window.name === 'torrents') {
+    btn.textContent = 'Сменить парсер';
+    btn.onclick = function() {
+      if (window.electronAPI && window.electronAPI.openParserSelection) {
+        window.electronAPI.openParserSelection();
+      } else {
+        window.postMessage({type:'openParserSelection'},'*');
+      }
+    }
+  } else {
+    btn.textContent = 'Сменить зеркало';
+    btn.onclick = function() {
+      if (window.electronAPI && window.electronAPI.openMirrorSelection) {
+        window.electronAPI.openMirrorSelection();
+      } else {
+        window.postMessage({type:'openMirrorSelection'},'*');
+      }
+    }
+  }
+}, 10000);
+</script>
 </body>
 
 </html>

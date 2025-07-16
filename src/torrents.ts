@@ -268,6 +268,43 @@ export async function createTorrentsWindow(kpTitle: string, year: string | null,
 
   mainWindow?.loadURL(`${getCurrentTorrentParserUrl()}/index3.html?rand=${Date.now()}`);
 
+  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+    if (validatedURL.includes('index3.html')) {
+      dialog.showMessageBox(mainWindow!, {
+        noLink: true,
+        type: 'error',
+        title: `Ошибка загрузки парсера`,
+        message: `Не удалось загрузить ${validatedURL}\n\nОшибка: ${errorDescription}\n\nХотите сменить парсер?`,
+        buttons: ['Отмена', 'Сменить парсер'],
+      }).then((result) => {
+        if (result.response === 1) {
+          const menu = Menu.buildFromTemplate([
+            {
+              label: 'Торрент парсер',
+              submenu: [
+                {
+                  label: 'Основной (reyohoho.space)',
+                  type: 'radio',
+                  checked: store.get('selected_torrent_parser', 'primary') === 'primary',
+                  click: () => switchTorrentParser('primary')
+                },
+                {
+                  label: 'Альтернативный (rhhhhhhh.live)',
+                  type: 'radio',
+                  checked: store.get('selected_torrent_parser', 'primary') === 'alternative',
+                  click: () => switchTorrentParser('alternative')
+                }
+              ]
+            }
+          ]);
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            menu.popup({ window: mainWindow });
+          }
+        }
+      });
+    }
+  });
+
   mainWindow.on('closed', function () {
     mainWindow = null
   })
@@ -461,6 +498,31 @@ ipcMain.on('magnet-input-result', (event, result) => {
     `);
 
     openMagnet(userMagnet);
+  }
+});
+
+ipcMain.on('open-parser-selection', () => {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    const menu = Menu.buildFromTemplate([
+      {
+        label: 'Торрент парсер',
+        submenu: [
+          {
+            label: 'Основной (reyohoho.space)',
+            type: 'radio',
+            checked: store.get('selected_torrent_parser', 'primary') === 'primary',
+            click: () => switchTorrentParser('primary')
+          },
+          {
+            label: 'Альтернативный (rhhhhhhh.live)',
+            type: 'radio',
+            checked: store.get('selected_torrent_parser', 'primary') === 'alternative',
+            click: () => switchTorrentParser('alternative')
+          }
+        ]
+      }
+    ]);
+    menu.popup({ window: mainWindow });
   }
 });
 

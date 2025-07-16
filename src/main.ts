@@ -539,17 +539,19 @@ async function createWindow(configError: any | ''): Promise<void> {
         background: #d1d1d1;
       }
     `);
+    const currentUrl = mainWindow?.webContents.getURL() || '';
+    if (currentUrl.endsWith('loader.html') || currentUrl.startsWith('file://') && currentUrl.includes('loader.html')) {
+      if (deep_link_data) {
+        setTimeout(() => mainWindow?.loadURL(`${main_site_url!}/${deep_link_data}`), 100);
+      } else {
+        setTimeout(() => mainWindow?.loadURL(main_site_url!), 100);
+      }
+    }
   });
 
   mainWindow.on('closed', function () {
     mainWindow = null
   })
-
-  if (deep_link_data) {
-    mainWindow?.loadURL(`${main_site_url!}/${deep_link_data}`);
-  } else {
-    mainWindow?.loadURL(main_site_url!);
-  }
 
   mainWindow.on('focus', function () {
     registerHotkeys();
@@ -863,4 +865,8 @@ autoUpdater.on('download-progress', (progressObj) => {
 autoUpdater.on('update-downloaded', (info) => {
   console.log('Update downloaded.', info);
   showUpdateAvailableDialog();
+});
+
+ipcMain.on('open-mirror-selection', () => {
+  changeWebUrlMirror();
 });
