@@ -11,10 +11,10 @@
   "url_handler_deny": "https://reyohoho.",
   "torr_server_urls": [
     "https://trsrv1.reyohoho.space/",
-    "https://trsrv2.reyohoho.space/",
+    "https://trsrv2.reyohoho.space/"
   ],
   "torr_server_locations": [
     "Москва",
-    "Нидерланды",
+    "Нидерланды"
   ]
 }
