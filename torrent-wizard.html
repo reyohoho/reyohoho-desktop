@@ -35,9 +35,11 @@
 
       .content {
         flex: 1;
+        min-width: 0;
         padding: 20px;
         display: flex;
         flex-direction: column;
+        overflow-x: hidden;
       }
 
       .step {
@@ -120,8 +122,10 @@
 
       .main-content {
         flex: 1;
+        min-width: 0;
         display: flex;
         flex-direction: column;
+        overflow-x: hidden;
       }
 
       .header {
@@ -133,11 +137,15 @@
         font-weight: 600;
         color: #cdd6f4;
         margin-bottom: 8px;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
       }
 
       .header p {
         color: #a6adc8;
         font-size: 16px;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
       }
 
       .card {
@@ -146,6 +154,8 @@
         border-radius: 12px;
         padding: 25px;
         margin-bottom: 20px;
+        max-width: 100%;
+        overflow: hidden;
       }
 
       .form-group {
@@ -224,16 +234,21 @@
         border-radius: 8px;
         padding: 16px;
         overflow-y: auto;
+        overflow-x: auto;
         max-height: 300px;
         height: 300px;
+        max-width: 100%;
         font-family: "Consolas", "Monaco", monospace;
         font-size: 13px;
         line-height: 1.5;
+        word-break: break-all;
       }
 
       .log-entry {
         margin-bottom: 4px;
         padding: 4px 0;
+        word-wrap: break-word;
+        overflow-wrap: break-word;
       }
 
       .log-entry.info {
@@ -284,7 +299,11 @@
 
       .file-name {
         flex: 1;
+        min-width: 0;
         font-size: 14px;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
       }
 
       .file-size {
@@ -296,6 +315,7 @@
         display: flex;
         gap: 12px;
         margin-top: 20px;
+        flex-wrap: wrap;
       }
 
       .hidden {
@@ -324,6 +344,17 @@
         }
         100% {
           transform: rotate(360deg);
+        }
+      }
+
+      @keyframes pulse {
+        0%, 100% {
+          opacity: 1;
+          transform: scale(1);
+        }
+        50% {
+          opacity: 0.5;
+          transform: scale(0.8);
         }
       }
 
@@ -409,6 +440,9 @@
               <div class="button-group">
                 <button id="btnSelectServer" class="btn btn-primary">
                   Продолжить
+                </button>
+                <button id="btnTestSpeed" class="btn btn-secondary">
+                  Тестировать скорость до сервера
                 </button>
               </div>
             </div>
@@ -497,7 +531,38 @@
 
           <div id="step6" class="step-content hidden">
             <div class="card">
-              <div class="loading">
+              <div id="torrentStats" class="hidden" style="margin-bottom: 20px; padding: 16px; background: #313244; border-radius: 8px; max-width: 100%; overflow: hidden;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                  <h3 style="margin: 0; font-size: 16px; color: #cdd6f4;">Статистика торрента:</h3>
+                  <div id="liveIndicator" class="hidden" style="display: flex; align-items: center; gap: 6px; font-size: 12px; color: #a6e3a1;">
+                    <div style="width: 8px; height: 8px; border-radius: 50%; background: #a6e3a1; animation: pulse 1.5s ease-in-out infinite;"></div>
+                    <span>Live</span>
+                  </div>
+                </div>
+                <div style="display: flex; flex-direction: column; gap: 8px; font-size: 14px;">
+                  <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <span style="color: #a6adc8;">Сервер:</span>
+                    <span id="statServerName" style="color: #cba6f7; font-weight: 600;">-</span>
+                  </div>
+                  <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <span style="color: #a6adc8;">Пиры:</span>
+                    <span id="statTotalPeers" style="color: #89b4fa; font-weight: 600;">-</span>
+                  </div>
+                  <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <span style="color: #a6adc8;">Сиды:</span>
+                    <span id="statActivePeers" style="color: #a6e3a1; font-weight: 600;">-</span>
+                  </div>
+                  <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <span style="color: #a6adc8;">Скорость загрузки(сервер):</span>
+                    <span id="statDownloadSpeed" style="color: #89b4fa; font-weight: 600;">-</span>
+                  </div>
+                  <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <span style="color: #a6adc8;">Размер торрента:</span>
+                    <span id="statTorrentSize" style="color: #cdd6f4; font-weight: 600;">-</span>
+                  </div>
+                </div>
+              </div>
+              <div id="playerLoading" class="loading">
                 <div class="spinner"></div>
                 <span>Запуск плеера...</span>
               </div>
@@ -536,9 +601,11 @@
       let maxAvailableStep = 1;
       let magnetUrl = "";
       let selectedServer = "";
+      let selectedServerName = "";
       let torrentHash = "";
       let torrentFiles = [];
       let selectedFiles = [];
+      let currentStats = null;
 
       function updateStep(step, allowNavigation = false) {
         if (step > maxAvailableStep) {
@@ -623,8 +690,11 @@
         }
       }
 
+      let serversData = [];
+
       ipcRenderer.on("init-wizard", (event, data) => {
         magnetUrl = data.magnetUrl;
+        serversData = data.servers;
 
         const logContainer = document.getElementById("logContainer");
         logContainer.innerHTML = "";
@@ -638,6 +708,18 @@
           option.textContent = `${server.location} - ${server.url}`;
           serverSelect.appendChild(option);
         });
+        
+        // Update test speed button text when server selection changes
+        const updateTestSpeedButton = () => {
+          const serverIndex = serverSelect.value;
+          const btnTestSpeed = document.getElementById("btnTestSpeed");
+          if (serversData[serverIndex]) {
+            btnTestSpeed.textContent = `Тестировать скорость до сервера (${serversData[serverIndex].location})`;
+          }
+        };
+        
+        serverSelect.addEventListener("change", updateTestSpeedButton);
+        updateTestSpeedButton(); // Initial update
 
         addLog(`Magnet URL: ${magnetUrl.substring(0, 100)}...`);
 
@@ -665,6 +747,11 @@
         .addEventListener("click", () => {
           const serverIndex = document.getElementById("serverSelect").value;
           selectedServer = serverIndex;
+          
+          // Save server name
+          if (serversData[serverIndex]) {
+            selectedServerName = serversData[serverIndex].location;
+          }
 
           addLog(`Выбран сервер #${parseInt(serverIndex) + 1}`);
           updateStep(2);
@@ -672,6 +759,25 @@
           ipcRenderer.send("server-selected", {
             serverIndex: parseInt(serverIndex),
           });
+        });
+
+      document
+        .getElementById("btnTestSpeed")
+        .addEventListener("click", () => {
+          const serverIndex = document.getElementById("serverSelect").value;
+          
+          if (serversData[serverIndex] && serversData[serverIndex].speedtestUrl) {
+            const speedtestUrl = serversData[serverIndex].speedtestUrl;
+            const serverName = serversData[serverIndex].location;
+            
+            addLog(`Открытие теста скорости для сервера: ${serverName}`, "info");
+            
+            // Open speedtest URL in external browser
+            const { shell } = require("electron");
+            shell.openExternal(speedtestUrl);
+          } else {
+            addLog("URL теста скорости не найден для выбранного сервера", "error");
+          }
         });
 
       document.getElementById("btnSelectAll").addEventListener("click", () => {
@@ -734,7 +840,6 @@
         .getElementById("btnInternalPlayer")
         .addEventListener("click", () => {
           addLog("Выбран внутренний плеер (mpv)");
-          updateStep(6);
           ipcRenderer.send("player-selected", { playerType: "internal" });
         });
 
@@ -742,7 +847,6 @@
         .getElementById("btnExternalPlayer")
         .addEventListener("click", () => {
           addLog("Выбран внешний плеер");
-          updateStep(6);
           ipcRenderer.send("player-selected", { playerType: "external" });
         });
 
@@ -753,7 +857,9 @@
         });
 
       ipcRenderer.on("step-progress", (event, data) => {
-        updateStep(data.step);
+        if (data.step !== null && data.step !== undefined) {
+          updateStep(data.step);
+        }
         if (data.message) {
           addLog(data.message, data.type || "info");
         }
@@ -801,6 +907,11 @@
           }
         });
 
+        // Store torrent statistics if available
+        if (data.stats) {
+          currentStats = data.stats;
+        }
+
         if (data.files.length === 1) {
           setTimeout(() => {
             document.getElementById("btnSelectFiles").click();
@@ -815,12 +926,35 @@
           "Плеер запущен успешно, может потребоваться время для показа окна на время первого кэширования",
           "success"
         );
-        document
-          .querySelector('.step[data-step="6"]')
-          .classList.remove("active");
-        document
-          .querySelector('.step[data-step="6"]')
-          .classList.add("completed");
+        
+        // Move to step 6
+        updateStep(6);
+        
+        // Use setTimeout to ensure DOM is updated
+        setTimeout(() => {
+          // Hide loading spinner
+          const playerLoading = document.getElementById("playerLoading");
+          if (playerLoading) {
+            playerLoading.style.display = "none";
+          }
+          
+          // Show stats
+          showStatsOnStep6();
+          
+          // Show live indicator
+          const liveIndicator = document.getElementById("liveIndicator");
+          if (liveIndicator) {
+            liveIndicator.classList.remove("hidden");
+          }
+          
+          // Mark step as completed
+          document
+            .querySelector('.step[data-step="6"]')
+            .classList.remove("active");
+          document
+            .querySelector('.step[data-step="6"]')
+            .classList.add("completed");
+        }, 100);
       });
 
       ipcRenderer.on("error", (event, data) => {
@@ -830,15 +964,58 @@
 
       ipcRenderer.on("player-path-selected", (event, data) => {
         addLog(`Выбран плеер: ${data.path}`, "success");
-        updateStep(6);
         ipcRenderer.send("player-selected", {
           playerType: "custom",
           path: data.path,
         });
       });
 
+      function showStatsOnStep6() {
+        // Hide loading spinner first
+        const playerLoading = document.getElementById("playerLoading");
+        if (playerLoading) {
+          playerLoading.style.display = "none";
+        }
+        
+        // Show stats block on step 6
+        const statsBlock = document.getElementById("torrentStats");
+        if (statsBlock && currentStats) {
+          statsBlock.classList.remove("hidden");
+          
+          // Update with current stats
+          document.getElementById("statServerName").textContent = selectedServerName || "-";
+          document.getElementById("statTotalPeers").textContent = currentStats.totalPeers;
+          document.getElementById("statActivePeers").textContent = currentStats.activePeers;
+          document.getElementById("statDownloadSpeed").textContent = 
+            (currentStats.downloadSpeed * 8 / 1024 / 1024).toFixed(2) + " Мбит/с";
+          document.getElementById("statTorrentSize").textContent = 
+            formatFileSize(currentStats.torrentSize);
+        }
+      }
+
       ipcRenderer.on("auto-choose-player", (event, data) => {
         document.getElementById("btnChoosePlayer").click();
+      });
+
+      ipcRenderer.on("stats-update", (event, data) => {
+        if (data.stats) {
+          const stats = data.stats;
+          currentStats = stats; // Store current stats
+          
+          // Update stats without animation
+          const updateElement = (id, value) => {
+            const element = document.getElementById(id);
+            if (element) {
+              element.textContent = value;
+            }
+          };
+          
+          updateElement("statServerName", selectedServerName || "-");
+          updateElement("statTotalPeers", stats.totalPeers.toString());
+          updateElement("statActivePeers", stats.activePeers.toString());
+          updateElement("statDownloadSpeed", (stats.downloadSpeed * 8 / 1024 / 1024).toFixed(2) + " Мбит/с");
+          updateElement("statTorrentSize", formatFileSize(stats.torrentSize));
+        }
       });
 
       function formatFileSize(bytes) {

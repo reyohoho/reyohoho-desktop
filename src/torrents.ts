@@ -113,7 +113,8 @@ function createWizardWindow(magnetUrl: string): void {
 
     const servers = appConfig!.torr_server_urls.map((url, index) => ({
       url,
-      location: appConfig!.torr_server_locations[index]
+      location: appConfig!.torr_server_locations[index],
+      speedtestUrl: appConfig!.torr_server_speedtest_urls[index]
     }));
 
     wizardWindow?.webContents.send('init-wizard', {
@@ -126,6 +127,7 @@ function createWizardWindow(magnetUrl: string): void {
   });
 
   wizardWindow.on('closed', () => {
+    stopStatsUpdate();
     wizardWindow = null;
     currentMagnetUrl = null;
     currentTorrentHash = null;
@@ -528,6 +530,7 @@ ipcMain.on('open-parser-selection', () => {
 
 let storedPlayUrls: string[] = [];
 let storedTorrentFiles: any[] = [];
+let statsUpdateInterval: NodeJS.Timeout | null = null;
 
 function getStoredPlayUrls(): string[] {
   return storedPlayUrls;
@@ -535,6 +538,66 @@ function getStoredPlayUrls(): string[] {
 
 function getCurrentTorrentFiles(): any[] {
   return storedTorrentFiles;
+}
+
+function startStatsUpdate(): void {
+  if (statsUpdateInterval) {
+    clearInterval(statsUpdateInterval);
+  }
+
+  statsUpdateInterval = setInterval(async () => {
+    if (!wizardWindow || wizardWindow.isDestroyed() || !currentTorrentHash) {
+      stopStatsUpdate();
+      return;
+    }
+
+    try {
+      const apiUrl = `${selectedTorrServerUrl}torrents`;
+      const raw = JSON.stringify({
+        "action": "get",
+        "hash": currentTorrentHash
+      });
+
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Basic ${userToken}`
+        },
+        body: raw,
+      });
+
+      if (!response.ok) {
+        return;
+      }
+
+      const data = await response.json();
+      
+      if (data["stat"] === 3) {
+        const torrentStats = {
+          totalPeers: data["total_peers"] || 0,
+          activePeers: data["active_peers"] || 0,
+          pendingPeers: data["pending_peers"] || 0,
+          downloadSpeed: data["download_speed"] || 0,
+          uploadSpeed: data["upload_speed"] || 0,
+          torrentSize: data["torrent_size"] || 0
+        };
+
+        if (wizardWindow && !wizardWindow.isDestroyed()) {
+          wizardWindow.webContents.send('stats-update', { stats: torrentStats });
+        }
+      }
+    } catch (error) {
+      console.error('Stats update error:', error);
+    }
+  }, 500);
+}
+
+function stopStatsUpdate(): void {
+  if (statsUpdateInterval) {
+    clearInterval(statsUpdateInterval);
+    statsUpdateInterval = null;
+  }
 }
 
 function handleMagnetWithWizard(url: string, base64Credentials: string): void {
@@ -555,6 +618,8 @@ function handleMagnetWithWizard(url: string, base64Credentials: string): void {
     body: raw,
   })
     .then(response => {
+      logToWizard(`Ответ от сервера: статус ${response.status} ${response.statusText}`, 'info');
+      
       if (response.status === 401) {
         return Promise.reject('Ошибка 401: Неверные учетные данные, выберите торрент сервер к которому у вас есть доступ');
       }
@@ -566,6 +631,8 @@ function handleMagnetWithWizard(url: string, base64Credentials: string): void {
       return response.json();
     })
     .then(result => {
+      logToWizard(`Полученные данные: ${JSON.stringify(result)}`, 'info');
+      
       const hash = result["hash"];
       currentTorrentHash = hash;
 
@@ -623,6 +690,10 @@ function launchPlayer(playerPath: string, playUrls: string[]): void {
   });
 
   wizardWindow?.webContents.send('player-launched', { success: true });
+  
+  // Start stats update after player launch
+  startStatsUpdate();
+  logToWizard('Начато обновление статистики торрента (каждые 0.5 сек)', 'info');
 }
 
 function preparePlayerWithWizard(playUrls: string[]): void {
@@ -652,8 +723,12 @@ async function fetchWithRetryWizard(
     }
     logToWizard(`Получаем hash... попытка ${retryCount}/${retryMaxCount}`, 'info');
     const response = await fetch(url, options);
+    logToWizard(`Ответ от сервера: статус ${response.status} ${response.statusText}`, 'info');
+    
     const data = await response.json();
-    console.log(`Stat: ${data["stat"]}`);
+    logToWizard(`Полученные данные: ${JSON.stringify(data)}`, 'info');
+    logToWizard(`Stat: ${data["stat"]}`, 'info');
+    
     if (data["stat"] === 3) {
       storedTorrentFiles = data["file_stats"].filter((file: any) => {
         const isVideoFile = videoExtensions.some(ext => file.path.endsWith(ext));
@@ -667,18 +742,33 @@ async function fetchWithRetryWizard(
         return;
       }
 
+      const torrentStats = {
+        totalPeers: data["total_peers"] || 0,
+        activePeers: data["active_peers"] || 0,
+        pendingPeers: data["pending_peers"] || 0,
+        downloadSpeed: data["download_speed"] || 0,
+        uploadSpeed: data["upload_speed"] || 0,
+        torrentSize: data["torrent_size"] || 0
+      };
+
+      logToWizard(`Пиры: ${torrentStats.totalPeers} (активных: ${torrentStats.activePeers})`, 'info');
+      logToWizard(`Скорость загрузки(сервер): ${(torrentStats.downloadSpeed / 1024 / 1024).toFixed(2)} MB/s`, 'info');
+
       if (wizardWindow && !wizardWindow.isDestroyed()) {
-        wizardWindow.webContents.send('files-received', { files: storedTorrentFiles });
+        wizardWindow.webContents.send('files-received', { 
+          files: storedTorrentFiles,
+          stats: torrentStats
+        });
       }
 
       return data;
     } else {
-      console.log(`Status: ${response.status}. Retry in ${delay} ms...`);
+      logToWizard(`Торрент еще не готов. Retry in ${delay} ms...`, 'warning');
       await new Promise(resolve => setTimeout(resolve, delay));
       return fetchWithRetryWizard(url, options, delay, ++retryCount);
     }
   } catch (error) {
-    console.error('Error:', error);
+    logToWizard(`Ошибка при запросе: ${error}. Повторная попытка через ${delay} ms...`, 'error');
     await new Promise(resolve => setTimeout(resolve, delay));
     return fetchWithRetryWizard(url, options, delay, ++retryCount);
   }

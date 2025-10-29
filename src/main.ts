@@ -198,6 +198,7 @@ export interface AppConfig {
   url_handler_deny: string,
   torr_server_urls: string[],
   torr_server_locations: string[],
+  torr_server_speedtest_urls: string[],
 }
 
 function loadConfig(): void {
