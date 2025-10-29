@@ -128,6 +128,7 @@ function createWizardWindow(magnetUrl: string): void {
 
   wizardWindow.on('closed', () => {
     stopStatsUpdate();
+    abortHashFetch();
     wizardWindow = null;
     currentMagnetUrl = null;
     currentTorrentHash = null;
@@ -353,6 +354,8 @@ ipcMain.on('server-selected', (event, data) => {
   selectedTorrServerUrl = appConfig!.torr_server_urls[serverIndex];
   store.set('selected_torr_server_url', selectedTorrServerUrl);
 
+  abortHashFetch();
+
   logToWizard(`Подключение к серверу ${appConfig!.torr_server_locations[serverIndex]}`, 'info');
 
   if (currentMagnetUrl) {
@@ -531,6 +534,7 @@ ipcMain.on('open-parser-selection', () => {
 let storedPlayUrls: string[] = [];
 let storedTorrentFiles: any[] = [];
 let statsUpdateInterval: NodeJS.Timeout | null = null;
+let hashFetchAbortController: AbortController | null = null;
 
 function getStoredPlayUrls(): string[] {
   return storedPlayUrls;
@@ -600,6 +604,13 @@ function stopStatsUpdate(): void {
   }
 }
 
+function abortHashFetch(): void {
+  if (hashFetchAbortController) {
+    hashFetchAbortController.abort();
+    hashFetchAbortController = null;
+  }
+}
+
 function handleMagnetWithWizard(url: string, base64Credentials: string): void {
   const apiUrl = `${selectedTorrServerUrl}torrents`;
   const raw = JSON.stringify({
@@ -608,6 +619,8 @@ function handleMagnetWithWizard(url: string, base64Credentials: string): void {
   });
 
   logToWizard('Добавление торрента на сервер...', 'info');
+
+  hashFetchAbortController = new AbortController();
 
   fetch(apiUrl, {
     method: 'POST',
@@ -653,10 +666,11 @@ function handleMagnetWithWizard(url: string, base64Credentials: string): void {
         body: raw2,
       };
 
-      fetchWithRetryWizard(apiUrl, options);
+      fetchWithRetryWizard(apiUrl, options, 1000, 1, 50, hashFetchAbortController!);
     })
     .catch(error => {
       logToWizard(`Ошибка при добавлении торрента: ${error}`, 'error');
+      hashFetchAbortController = null;
     });
 }
 
@@ -715,14 +729,25 @@ async function fetchWithRetryWizard(
   delay: number = 1000,
   retryCount: number = 1,
   retryMaxCount: number = 50,
+  abortController: AbortController
 ): Promise<any> {
   try {
+    if (abortController.signal.aborted) {
+      return;
+    }
+
     if (retryCount > retryMaxCount) {
       logToWizard(`Не удалось получить hash (попыток: ${retryCount}/${retryMaxCount})`, 'error');
+      hashFetchAbortController = null;
       return;
     }
     logToWizard(`Получаем hash... попытка ${retryCount}/${retryMaxCount}`, 'info');
-    const response = await fetch(url, options);
+    
+    const response = await fetch(url, {
+      ...options,
+      signal: abortController.signal
+    });
+    
     logToWizard(`Ответ от сервера: статус ${response.status} ${response.statusText}`, 'info');
     
     const data = await response.json();
@@ -739,6 +764,7 @@ async function fetchWithRetryWizard(
 
       if (storedTorrentFiles.length === 0) {
         logToWizard('В раздаче не найдены видео-файлы', 'error');
+        hashFetchAbortController = null;
         return;
       }
 
@@ -761,16 +787,23 @@ async function fetchWithRetryWizard(
         });
       }
 
+      hashFetchAbortController = null;
       return data;
     } else {
       logToWizard(`Торрент еще не готов. Retry in ${delay} ms...`, 'warning');
       await new Promise(resolve => setTimeout(resolve, delay));
-      return fetchWithRetryWizard(url, options, delay, ++retryCount);
+      return fetchWithRetryWizard(url, options, delay, ++retryCount, retryMaxCount, abortController);
     }
-  } catch (error) {
+  } catch (error: any) {
+    if (error.name === 'AbortError') {
+      logToWizard('Получение hash отменено', 'warning');
+      hashFetchAbortController = null;
+      return;
+    }
+
     logToWizard(`Ошибка при запросе: ${error}. Повторная попытка через ${delay} ms...`, 'error');
     await new Promise(resolve => setTimeout(resolve, delay));
-    return fetchWithRetryWizard(url, options, delay, ++retryCount);
+    return fetchWithRetryWizard(url, options, delay, ++retryCount, retryMaxCount, abortController);
   }
 }
 
