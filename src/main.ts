@@ -36,115 +36,6 @@ let deep_link_data: String | null;
 
 let authWindow: BrowserWindow | null = null;
 
-const menu = (isMacOS = process.platform === 'darwin'): Menu => {
-  if (isMacOS) {
-    return Menu.buildFromTemplate([
-      {
-        label: 'Настройки',
-        submenu: [
-          {
-            label: 'Сменить URL зеркала',
-            click: () => {
-              changeWebUrlMirror();
-            }
-          },
-          {
-            label: 'Открыть инструменты разработчика',
-            click: () => {
-              mainWindow?.webContents.openDevTools();
-            }
-          },
-          {
-            label: 'ReYohoho VIP(F1)',
-            click: () => openTorrents()
-          },
-          {
-            label: "Блюр (F2)",
-            click: () => switchBlurVideo()
-          },
-          {
-            label: "Компрессор (F3)",
-            click: () => switchCompressor()
-          },
-          {
-            label: "Отражение (F4)",
-            click: () => switchMirror()
-          },
-          {
-            label: "Обновить (F5) Принуд.:(Ctrl+F5)",
-            click: () => reload()
-          },
-          {
-            label: "Скорость(-0.25x) 0.25x MIN (F6)",
-            click: () => decreasePlaybackSpeed()
-          },
-          {
-            label: "Сбросить скорость (F7)",
-            click: () => resetPlaybackSpeed()
-          },
-          {
-            label: "Скорость(+0.25x) 4x MAX (F8)",
-            click: () => increasePlaybackSpeed()
-          }
-        ]
-      },
-    ]);
-  } else {
-    return Menu.buildFromTemplate([
-      {
-        label: 'Настройки',
-        submenu: [
-          {
-            label: 'Сменить URL зеркала',
-            click: () => {
-              changeWebUrlMirror();
-            }
-          },
-          {
-            label: 'Открыть инструменты разработчика',
-            click: () => {
-              mainWindow?.webContents.openDevTools();
-            }
-          },
-
-        ]
-      },
-      {
-        label: 'ReYohoho VIP(F1)',
-        click: () => openTorrents()
-      },
-      {
-        label: "Блюр (F2)",
-        click: () => switchBlurVideo()
-      },
-      {
-        label: "Компрессор (F3)",
-        click: () => switchCompressor()
-      },
-      {
-        label: "Отражение (F4)",
-        click: () => switchMirror()
-      },
-      {
-        label: "Обновить (F5) Принуд.:(Ctrl+F5)",
-        click: () => reload()
-      },
-      {
-        label: "Скорость(-0.25x) 0.25x MIN (F6)",
-        click: () => decreasePlaybackSpeed()
-      },
-      {
-        label: "Сбросить скорость (F7)",
-        click: () => resetPlaybackSpeed()
-      },
-      {
-        label: "Скорость(+0.25x) 4x MAX (F8)",
-        click: () => increasePlaybackSpeed()
-      }
-    ]);
-  }
-};
-
 const reload = (): void => {
   if (mainWindow?.webContents.getURL().includes("loader.html")) {
     mainWindow?.loadURL(main_site_url!);
@@ -486,12 +377,7 @@ async function createWindow(configError: any | ''): Promise<void> {
     }
   });
 
-  if (process.platform !== 'darwin') {
-    mainWindow?.setMenu(menu());
-  } else {
-    Menu.setApplicationMenu(menu());
-  }
-
+  mainWindow.setMenu(null);
   mainWindow?.loadFile("loader.html");
 
   mainWindow.setTitle(APP_NAME + ' Loading ....');
@@ -539,7 +425,262 @@ async function createWindow(configError: any | ''): Promise<void> {
         background: #d1d1d1;
       }
     `);
+    
+    // Inject top menu bar
     const currentUrl = mainWindow?.webContents.getURL() || '';
+    if (!currentUrl.includes('loader.html') && !currentUrl.includes('auth-window.html') && !currentUrl.includes('mirror-selection.html') && !currentUrl.includes('magnet-input.html') && !currentUrl.includes('torrent-wizard.html')) {
+      mainWindow?.webContents.executeJavaScript(`
+        (function() {
+          if (document.getElementById('reyohoho-top-menu')) return;
+          
+          const menuBar = document.createElement('div');
+          menuBar.id = 'reyohoho-top-menu';
+          menuBar.innerHTML = \`
+            <style>
+              #reyohoho-top-menu {
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 48px;
+                background: #0a0a0a;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.8);
+                z-index: 2147483647 !important;
+                display: flex;
+                align-items: center;
+                padding: 0 16px;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+                user-select: none;
+                border-bottom: 1px solid #1a1a1a;
+              }
+              #reyohoho-top-menu .menu-logo {
+                font-size: 17px;
+                font-weight: 700;
+                color: #ffffff;
+                margin-right: 24px;
+              }
+              #reyohoho-top-menu .menu-items {
+                display: flex;
+                gap: 6px;
+                flex: 1;
+                align-items: center;
+              }
+              #reyohoho-top-menu .menu-btn {
+                background: #1a1a1a;
+                border: 1px solid #2a2a2a;
+                color: #b0b0b0;
+                padding: 7px 12px;
+                border-radius: 6px;
+                cursor: pointer;
+                font-size: 13px;
+                transition: all 0.15s ease;
+                white-space: nowrap;
+                font-weight: 500;
+                position: relative;
+                display: flex;
+                align-items: center;
+                gap: 6px;
+              }
+              #reyohoho-top-menu .menu-btn .hotkey {
+                font-size: 10px;
+                background: #2a2a2a;
+                padding: 2px 5px;
+                border-radius: 3px;
+                color: #666;
+                font-weight: 600;
+                border: 1px solid #333;
+              }
+              #reyohoho-top-menu .menu-btn:hover {
+                background: #2a2a2a;
+                border-color: #444;
+                color: #ffffff;
+                transform: translateY(-1px);
+                box-shadow: 0 2px 8px rgba(0,0,0,0.4);
+              }
+              #reyohoho-top-menu .menu-btn:hover .hotkey {
+                background: #ffffff;
+                color: #000;
+                border-color: #ffffff;
+              }
+              #reyohoho-top-menu .menu-btn:active {
+                transform: translateY(0);
+              }
+              #reyohoho-top-menu .menu-btn.primary {
+                background: #ffffff;
+                border-color: #ffffff;
+                color: #000;
+                font-weight: 600;
+              }
+              #reyohoho-top-menu .menu-btn.primary .hotkey {
+                background: rgba(0,0,0,0.15);
+                color: #000;
+                border-color: rgba(0,0,0,0.2);
+              }
+              #reyohoho-top-menu .menu-btn.primary:hover {
+                background: #e0e0e0;
+                transform: translateY(-1px);
+                box-shadow: 0 2px 8px rgba(255,255,255,0.2);
+              }
+              #reyohoho-top-menu .menu-btn.active {
+                background: #4a4a4a;
+                border-color: #666;
+                color: #ffffff;
+              }
+              #reyohoho-top-menu .menu-btn.active .hotkey {
+                background: #666;
+                color: #fff;
+              }
+              #reyohoho-top-menu .menu-divider {
+                width: 1px;
+                height: 28px;
+                background: #2a2a2a;
+                margin: 0 8px;
+              }
+              #reyohoho-top-menu .player-control {
+                display: flex;
+              }
+              #reyohoho-top-menu .player-control.hidden {
+                display: none !important;
+              }
+              body {
+                padding-top: 48px !important;
+              }
+              /* Fix for site's side menu */
+              .side-panel,
+              aside.side-panel,
+              .nav-component aside {
+                top: 48px !important;
+                height: calc(100vh - 48px) !important;
+              }
+            </style>
+            <div class="menu-logo">ReYohoho</div>
+            <div class="menu-items">
+              <button class="menu-btn primary" onclick="window.electronAPI.sendHotKey('F1')">
+                <i class="fas fa-film"></i> VIP <span class="hotkey">F1</span>
+              </button>
+              <div class="menu-divider player-control"></div>
+              <button id="blur-btn" class="menu-btn player-control" onclick="window.electronAPI.sendHotKey('F2')">
+                <i class="fas fa-eye-slash"></i> Блюр <span class="hotkey">F2</span>
+              </button>
+              <button id="compressor-btn" class="menu-btn player-control" onclick="window.electronAPI.sendHotKey('F3')">
+                <i class="fas fa-compress"></i> Компрессор <span class="hotkey">F3</span>
+              </button>
+              <button id="mirror-btn" class="menu-btn player-control" onclick="window.electronAPI.sendHotKey('F4')">
+                <i class="fas fa-arrows-left-right"></i> Отражение <span class="hotkey">F4</span>
+              </button>
+              <div class="menu-divider"></div>
+              <button class="menu-btn" onclick="location.reload()">
+                <i class="fas fa-rotate"></i> Обновить <span class="hotkey">F5</span>
+              </button>
+              <div class="menu-divider player-control"></div>
+              <button class="menu-btn player-control" onclick="window.electronAPI.sendHotKey('F6')">
+                <i class="fas fa-backward"></i> -0.25x <span class="hotkey">F6</span>
+              </button>
+              <button class="menu-btn player-control" onclick="window.electronAPI.sendHotKey('F7')">
+                <i class="fas fa-play"></i> 1.0x <span class="hotkey">F7</span>
+              </button>
+              <button class="menu-btn player-control" onclick="window.electronAPI.sendHotKey('F8')">
+                <i class="fas fa-forward"></i> +0.25x <span class="hotkey">F8</span>
+              </button>
+              <div class="menu-divider"></div>
+              <button class="menu-btn" onclick="window.electronAPI.openMirrorSelection()">
+                <i class="fas fa-globe"></i> Зеркало
+              </button>
+            </div>
+          \`;
+          
+          document.body.insertBefore(menuBar, document.body.firstChild);
+          
+          // Check if iframe exists and toggle player controls visibility
+          function updatePlayerControlsVisibility() {
+            const hasIframe = document.querySelector('iframe.responsive-iframe') !== null;
+            const playerControls = document.querySelectorAll('#reyohoho-top-menu .player-control');
+            playerControls.forEach(control => {
+              if (hasIframe) {
+                control.classList.remove('hidden');
+              } else {
+                control.classList.add('hidden');
+              }
+            });
+          }
+          
+          // Initial check
+          updatePlayerControlsVisibility();
+          
+          // Watch for DOM changes to detect iframe
+          const observer = new MutationObserver(() => {
+            updatePlayerControlsVisibility();
+          });
+          
+          observer.observe(document.body, {
+            childList: true,
+            subtree: true
+          });
+          
+          // Update button states based on actual feature status
+          function updateButtonStates() {
+            try {
+              const blurBtn = document.getElementById('blur-btn');
+              const compressorBtn = document.getElementById('compressor-btn');
+              const mirrorBtn = document.getElementById('mirror-btn');
+              
+              if (!blurBtn || !compressorBtn || !mirrorBtn) return;
+              
+              // Check blur state
+              const iframe = document.querySelector('iframe.responsive-iframe');
+              if (iframe) {
+                try {
+                  const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+                  if (iframeDoc) {
+                    const videos = iframeDoc.querySelectorAll('video');
+                    const isBlurred = videos.length > 0 
+                      ? videos[0].style.filter.includes('blur')
+                      : iframe.style.filter.includes('blur');
+                    
+                    if (isBlurred) {
+                      blurBtn.classList.add('active');
+                    } else {
+                      blurBtn.classList.remove('active');
+                    }
+                  }
+                } catch (e) {
+                  // Cross-origin iframe, can't access
+                }
+                
+                // Check compressor and mirror from localStorage (Pinia store persists to localStorage)
+                try {
+                  const playerStore = localStorage.getItem('player');
+                  if (playerStore) {
+                    const playerData = JSON.parse(playerStore);
+                    
+                    if (playerData.compressorEnabled) {
+                      compressorBtn.classList.add('active');
+                    } else {
+                      compressorBtn.classList.remove('active');
+                    }
+                    
+                    if (playerData.mirrorEnabled) {
+                      mirrorBtn.classList.add('active');
+                    } else {
+                      mirrorBtn.classList.remove('active');
+                    }
+                  }
+                } catch (e) {
+                  // Error parsing localStorage
+                }
+              }
+            } catch (error) {
+              // Ignore errors
+            }
+          }
+          
+          // Update every 500ms
+          setInterval(updateButtonStates, 500);
+          updateButtonStates();
+        })();
+      `);
+    }
+    
     if (currentUrl.endsWith('loader.html') || currentUrl.startsWith('file://') && currentUrl.includes('loader.html')) {
       if (deep_link_data) {
         setTimeout(() => mainWindow?.loadURL(`${main_site_url!}/${deep_link_data}`), 100);
