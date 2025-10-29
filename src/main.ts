@@ -75,7 +75,7 @@ const menu = (isMacOS = process.platform === 'darwin'): Menu => {
             click: () => reload()
           },
           {
-            label: "Скорость(-0.5x) 0.5x MIN (F6)",
+            label: "Скорость(-0.25x) 0.25x MIN (F6)",
             click: () => decreasePlaybackSpeed()
           },
           {
@@ -83,7 +83,7 @@ const menu = (isMacOS = process.platform === 'darwin'): Menu => {
             click: () => resetPlaybackSpeed()
           },
           {
-            label: "Скорость(+0.5x) 4x MAX (F8)",
+            label: "Скорость(+0.25x) 4x MAX (F8)",
             click: () => increasePlaybackSpeed()
           }
         ]
@@ -130,7 +130,7 @@ const menu = (isMacOS = process.platform === 'darwin'): Menu => {
         click: () => reload()
       },
       {
-        label: "Скорость(-0.5x) 0.5x MIN (F6)",
+        label: "Скорость(-0.25x) 0.25x MIN (F6)",
         click: () => decreasePlaybackSpeed()
       },
       {
@@ -138,7 +138,7 @@ const menu = (isMacOS = process.platform === 'darwin'): Menu => {
         click: () => resetPlaybackSpeed()
       },
       {
-        label: "Скорость(+0.5x) 4x MAX (F8)",
+        label: "Скорость(+0.25x) 4x MAX (F8)",
         click: () => increasePlaybackSpeed()
       }
     ]);
@@ -252,7 +252,7 @@ const increasePlaybackSpeed = (): void => {
   const increasePlaybackSpeed = `
         video_iframe = document.getElementsByClassName('responsive-iframe')[0].contentDocument.querySelectorAll('video')[0];
         if (video_iframe.playbackRate < 4.0) {
-          video_iframe.playbackRate += 0.5;
+          video_iframe.playbackRate += 0.25;
         }
         window.electronAPI.showToast('Текущая скорость: ' + video_iframe.playbackRate.toString()) + 'x';
   `;
@@ -263,8 +263,8 @@ const increasePlaybackSpeed = (): void => {
 const decreasePlaybackSpeed = (): void => {
   const decreasePlaybackSpeed = `
         video_iframe = document.getElementsByClassName('responsive-iframe')[0].contentDocument.querySelectorAll('video')[0];
-        if (video_iframe.playbackRate > 0.5) {
-          video_iframe.playbackRate -= 0.5;
+        if (video_iframe.playbackRate > 0.25) {
+          video_iframe.playbackRate -= 0.25;
         }
         window.electronAPI.showToast('Текущая скорость: ' + video_iframe.playbackRate.toString()) + 'x';
   `;
