@@ -6,17 +6,17 @@ contextBridge.exposeInMainWorld("electronAPI", {
     const messageElement = document.createElement("div");
     messageElement.textContent = message;
     messageElement.style.position = "fixed";
-    messageElement.style.top = "0";
-    messageElement.style.left = "0";
-    messageElement.style.width = "100%";
-    messageElement.style.height = "100%";
-    messageElement.style.backgroundColor = "rgba(0, 0, 0, 0.8)";
+    messageElement.style.bottom = "20px";
+    messageElement.style.left = "20px";
+    messageElement.style.padding = "16px 24px";
+    messageElement.style.backgroundColor = "rgba(0, 0, 0, 0.9)";
     messageElement.style.color = "white";
-    messageElement.style.display = "flex";
-    messageElement.style.justifyContent = "center";
-    messageElement.style.alignItems = "center";
-    messageElement.style.fontSize = "2rem";
+    messageElement.style.fontSize = "1.2rem";
+    messageElement.style.borderRadius = "8px";
+    messageElement.style.boxShadow = "0 4px 12px rgba(0, 0, 0, 0.5)";
     messageElement.style.zIndex = "99000";
+    messageElement.style.maxWidth = "300px";
+    messageElement.style.wordWrap = "break-word";
 
     document.body.appendChild(messageElement);
 
