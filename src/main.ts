@@ -202,6 +202,57 @@ const switchMirror = (): void => {
   mainWindow?.webContents.executeJavaScript('window.toggleMirror();');
 };
 
+const toggleMenu = (): void => {
+  const toggleMenuScript = `
+    (function() {
+      try {
+        const menu = document.getElementById('reyohoho-top-menu');
+        if (!menu) {
+          console.log('Menu not found');
+          return;
+        }
+        
+        const isCurrentlyHidden = menu.getAttribute('data-hidden') === 'true';
+        
+        if (isCurrentlyHidden) {
+          menu.style.display = 'flex';
+          menu.setAttribute('data-hidden', 'false');
+          document.body.style.setProperty('padding-top', '48px', 'important');
+          
+          const sidePanels = document.querySelectorAll('.side-panel, aside.side-panel, .nav-component aside');
+          if (sidePanels && sidePanels.length > 0) {
+            sidePanels.forEach(sidePanel => {
+              if (sidePanel && sidePanel.style) {
+                sidePanel.style.setProperty('top', '48px', 'important');
+                sidePanel.style.setProperty('height', 'calc(100vh - 48px)', 'important');
+              }
+            });
+          }
+        } else {
+          menu.style.display = 'none';
+          menu.setAttribute('data-hidden', 'true');
+          document.body.style.setProperty('padding-top', '0', 'important');
+          
+          const sidePanels = document.querySelectorAll('.side-panel, aside.side-panel, .nav-component aside');
+          if (sidePanels && sidePanels.length > 0) {
+            sidePanels.forEach(sidePanel => {
+              if (sidePanel && sidePanel.style) {
+                sidePanel.style.setProperty('top', '0', 'important');
+                sidePanel.style.setProperty('height', '100vh', 'important');
+              }
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error toggling menu:', error);
+      }
+    })();
+  `;
+  mainWindow?.webContents.executeJavaScript(toggleMenuScript).catch(err => {
+    console.error('Failed to toggle menu:', err);
+  });
+};
+
 if (!AbortSignal.timeout) {
   AbortSignal.timeout = function timeout(ms: number): AbortSignal {
     const ctrl = new AbortController();
@@ -263,6 +314,7 @@ function registerHotkeys(): void {
   globalShortcut.register('F7', resetPlaybackSpeed);
   globalShortcut.register('F8', increasePlaybackSpeed);
   globalShortcut.register('F9', changeCredentials);
+  globalShortcut.register('F10', toggleMenu);
   globalShortcut.register('F11', () => {
     mainWindow?.webContents.toggleDevTools();
   });
@@ -479,18 +531,37 @@ async function createWindow(configError: any | ''): Promise<void> {
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
                 user-select: none;
                 border-bottom: 1px solid #1a1a1a;
+                overflow: hidden;
               }
               #reyohoho-top-menu .menu-logo {
                 font-size: 17px;
                 font-weight: 700;
                 color: #ffffff;
                 margin-right: 24px;
+                flex-shrink: 0;
               }
               #reyohoho-top-menu .menu-items {
                 display: flex;
                 gap: 6px;
                 flex: 1;
                 align-items: center;
+                overflow-x: auto;
+                overflow-y: hidden;
+                min-width: 0;
+                padding-bottom: 2px;
+              }
+              #reyohoho-top-menu .menu-items::-webkit-scrollbar {
+                height: 3px;
+              }
+              #reyohoho-top-menu .menu-items::-webkit-scrollbar-track {
+                background: transparent;
+              }
+              #reyohoho-top-menu .menu-items::-webkit-scrollbar-thumb {
+                background: #2a2a2a;
+                border-radius: 3px;
+              }
+              #reyohoho-top-menu .menu-items::-webkit-scrollbar-thumb:hover {
+                background: #3a3a3a;
               }
               #reyohoho-top-menu .menu-btn {
                 background: #1a1a1a;
@@ -507,6 +578,10 @@ async function createWindow(configError: any | ''): Promise<void> {
                 display: flex;
                 align-items: center;
                 gap: 6px;
+                flex-shrink: 0;
+              }
+              #reyohoho-top-menu .menu-btn .btn-text {
+                display: inline;
               }
               #reyohoho-top-menu .menu-btn .hotkey {
                 font-size: 10px;
@@ -562,6 +637,7 @@ async function createWindow(configError: any | ''): Promise<void> {
                 height: 28px;
                 background: #2a2a2a;
                 margin: 0 8px;
+                flex-shrink: 0;
               }
               #reyohoho-top-menu .player-control {
                 display: flex;
@@ -579,42 +655,88 @@ async function createWindow(configError: any | ''): Promise<void> {
                 top: 48px !important;
                 height: calc(100vh - 48px) !important;
               }
+              
+              @media screen and (max-width: 1200px) {
+                #reyohoho-top-menu .menu-btn .btn-text {
+                  display: none;
+                }
+                #reyohoho-top-menu .menu-btn {
+                  padding: 7px 10px;
+                  gap: 0;
+                }
+                #reyohoho-top-menu .menu-btn i {
+                  margin: 0;
+                }
+                #reyohoho-top-menu .menu-divider {
+                  margin: 0 4px;
+                }
+              }
+              
+              @media screen and (max-width: 900px) {
+                #reyohoho-top-menu .menu-logo {
+                  font-size: 14px;
+                  margin-right: 12px;
+                }
+                #reyohoho-top-menu {
+                  padding: 0 8px;
+                }
+                #reyohoho-top-menu .menu-items {
+                  gap: 4px;
+                }
+              }
+              
+              @media screen and (max-width: 600px) {
+                #reyohoho-top-menu .hotkey {
+                  display: none !important;
+                }
+                #reyohoho-top-menu .menu-logo {
+                  font-size: 12px;
+                  margin-right: 8px;
+                }
+                #reyohoho-top-menu .menu-btn {
+                  padding: 6px 8px;
+                }
+              }
             </style>
             <div class="menu-logo">ReYohoho</div>
             <div class="menu-items">
               <button class="menu-btn primary" onclick="window.electronAPI.sendHotKey('F1')">
-                <i class="fas fa-film"></i> VIP <span class="hotkey">F1</span>
+                <i class="fas fa-film"></i> <span class="btn-text">VIP</span> <span class="hotkey">F1</span>
               </button>
               <button class="menu-btn" onclick="window.electronAPI.sendHotKey('F9')">
-                <i class="fas fa-key"></i> Аккаунт <span class="hotkey">F9</span>
+                <i class="fas fa-key"></i> <span class="btn-text">Аккаунт</span> <span class="hotkey">F9</span>
               </button>
               <div class="menu-divider player-control"></div>
               <button id="blur-btn" class="menu-btn player-control" onclick="window.electronAPI.sendHotKey('F2')">
-                <i class="fas fa-eye-slash"></i> Блюр <span class="hotkey">F2</span>
+                <i class="fas fa-eye-slash"></i> <span class="btn-text">Блюр</span> <span class="hotkey">F2</span>
               </button>
               <button id="compressor-btn" class="menu-btn player-control" onclick="window.electronAPI.sendHotKey('F3')">
-                <i class="fas fa-compress"></i> Компрессор <span class="hotkey">F3</span>
+                <i class="fas fa-compress"></i> <span class="btn-text">Компрессор</span> <span class="hotkey">F3</span>
               </button>
               <button id="mirror-btn" class="menu-btn player-control" onclick="window.electronAPI.sendHotKey('F4')">
-                <i class="fas fa-arrows-left-right"></i> Отражение <span class="hotkey">F4</span>
+                <i class="fas fa-arrows-left-right"></i> <span class="btn-text">Отражение</span> <span class="hotkey">F4</span>
               </button>
               <div class="menu-divider"></div>
               <button class="menu-btn" onclick="location.reload()">
-                <i class="fas fa-rotate"></i> Обновить <span class="hotkey">F5</span>
+                <i class="fas fa-rotate"></i> <span class="btn-text">Обновить</span> <span class="hotkey">F5</span>
               </button>
               <div class="menu-divider player-control"></div>
               <button class="menu-btn player-control" onclick="window.electronAPI.sendHotKey('F6')">
-                <i class="fas fa-backward"></i> -0.25x <span class="hotkey">F6</span>
+                <i class="fas fa-backward"></i> <span class="btn-text">-0.25x</span> <span class="hotkey">F6</span>
               </button>
               <button class="menu-btn player-control" onclick="window.electronAPI.sendHotKey('F7')">
-                <i class="fas fa-play"></i> 1.0x <span class="hotkey">F7</span>
+                <i class="fas fa-play"></i> <span class="btn-text">1.0x</span> <span class="hotkey">F7</span>
               </button>
               <button class="menu-btn player-control" onclick="window.electronAPI.sendHotKey('F8')">
-                <i class="fas fa-forward"></i> +0.25x <span class="hotkey">F8</span>
+                <i class="fas fa-forward"></i> <span class="btn-text">+0.25x</span> <span class="hotkey">F8</span>
               </button>
               <div class="menu-divider"></div>
               <button class="menu-btn" onclick="window.electronAPI.openMirrorSelection()">
-                <i class="fas fa-globe"></i> Сменить зеркало
+                <i class="fas fa-globe"></i> <span class="btn-text">Сменить зеркало</span>
+              </button>
+              <div class="menu-divider"></div>
+              <button class="menu-btn" onclick="window.electronAPI.sendHotKey('F10')">
+                <i class="fas fa-eye"></i> <span class="btn-text">Скрыть меню</span> <span class="hotkey">F10</span>
               </button>
             </div>
           \`;
@@ -760,6 +882,10 @@ async function createWindow(configError: any | ''): Promise<void> {
 
       case 'F9':
         changeCredentials();
+        return;
+
+      case 'F10':
+        toggleMenu();
         return;
 
       default:
@@ -996,6 +1122,7 @@ app.on('browser-window-blur', () => {
   globalShortcut.unregister('F7');
   globalShortcut.unregister('F8');
   globalShortcut.unregister('F9');
+  globalShortcut.unregister('F10');
   globalShortcut.unregister('F11');
   globalShortcut.unregister('CommandOrControl+R');
 })
