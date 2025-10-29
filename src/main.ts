@@ -83,6 +83,15 @@ async function getMetaContent(selector: string) {
 }
 
 let isNewCredsStored = false;
+
+function checkStoredCredentials(): void {
+  const login = store.get('login', '') as string;
+  const password = store.get('password', '') as string;
+  if (login && password) {
+    isNewCredsStored = true;
+  }
+}
+
 async function openTorrents() {
   if (isNewCredsStored) {
     const credentials = `${store.get('login', '') as string}:${store.get('password', '') as string}`;
@@ -111,7 +120,23 @@ async function openTorrents() {
       createTorrentsWindow(title, year, altName, appConfig!, base64Credentials);
     }
   }
-};
+}
+
+async function changeCredentials() {
+  const authResult = await createAuthWindow();
+  if (authResult) {
+    const credentials = `${authResult.login}:${authResult.password}`;
+    const base64Credentials = Buffer.from(credentials).toString("base64");
+    const titleAndYear = await getMetaContent('title-and-year');
+    const altName = await getMetaContent('original-title');
+
+    const match = titleAndYear.match(/^(.*?)\s*\((\d{4})\)$/);
+    const title = match ? match[1].trim() : titleAndYear.replace(/\s*\(.*\)$/, "");
+    const year = match ? match[2] : null;
+
+    createTorrentsWindow(title, year, altName, appConfig!, base64Credentials);
+  }
+}
 
 const switchBlurVideo = (): void => {
   const switchBlurScript = `
@@ -237,6 +262,7 @@ function registerHotkeys(): void {
   globalShortcut.register('F6', decreasePlaybackSpeed);
   globalShortcut.register('F7', resetPlaybackSpeed);
   globalShortcut.register('F8', increasePlaybackSpeed);
+  globalShortcut.register('F9', changeCredentials);
   globalShortcut.register('F11', () => {
     mainWindow?.webContents.toggleDevTools();
   });
@@ -559,6 +585,9 @@ async function createWindow(configError: any | ''): Promise<void> {
               <button class="menu-btn primary" onclick="window.electronAPI.sendHotKey('F1')">
                 <i class="fas fa-film"></i> VIP <span class="hotkey">F1</span>
               </button>
+              <button class="menu-btn" onclick="window.electronAPI.sendHotKey('F9')">
+                <i class="fas fa-key"></i> Аккаунт <span class="hotkey">F9</span>
+              </button>
               <div class="menu-divider player-control"></div>
               <button id="blur-btn" class="menu-btn player-control" onclick="window.electronAPI.sendHotKey('F2')">
                 <i class="fas fa-eye-slash"></i> Блюр <span class="hotkey">F2</span>
@@ -585,7 +614,7 @@ async function createWindow(configError: any | ''): Promise<void> {
               </button>
               <div class="menu-divider"></div>
               <button class="menu-btn" onclick="window.electronAPI.openMirrorSelection()">
-                <i class="fas fa-globe"></i> Зеркало
+                <i class="fas fa-globe"></i> Сменить зеркало
               </button>
             </div>
           \`;
@@ -727,6 +756,10 @@ async function createWindow(configError: any | ''): Promise<void> {
 
       case 'F8':
         increasePlaybackSpeed();
+        return;
+
+      case 'F9':
+        changeCredentials();
         return;
 
       default:
@@ -909,6 +942,7 @@ https://reyohoho.surge.sh/
 `;
   });
 
+  checkStoredCredentials();
   loadConfig();
   registerHotkeys();
 
@@ -961,6 +995,7 @@ app.on('browser-window-blur', () => {
   globalShortcut.unregister('F6');
   globalShortcut.unregister('F7');
   globalShortcut.unregister('F8');
+  globalShortcut.unregister('F9');
   globalShortcut.unregister('F11');
   globalShortcut.unregister('CommandOrControl+R');
 })
