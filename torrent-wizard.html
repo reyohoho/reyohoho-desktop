@@ -553,8 +553,12 @@
                     <span id="statActivePeers" style="color: #a6e3a1; font-weight: 600;">-</span>
                   </div>
                   <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
-                    <span style="color: #a6adc8;">Скорость загрузки(сервер):</span>
+                    <span style="color: #a6adc8;">Скорость загрузки файлов сервером:</span>
                     <span id="statDownloadSpeed" style="color: #89b4fa; font-weight: 600;">-</span>
+                  </div>
+                  <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
+                    <span style="color: #a6adc8;">Скорость загрузки(клиент/плеер):</span>
+                    <span id="statClientDownloadSpeed" style="color: #f9e2af; font-weight: 600;">-</span>
                   </div>
                   <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 8px;">
                     <span style="color: #a6adc8;">Размер торрента:</span>
@@ -988,6 +992,8 @@
           document.getElementById("statActivePeers").textContent = currentStats.activePeers;
           document.getElementById("statDownloadSpeed").textContent = 
             (currentStats.downloadSpeed * 8 / 1024 / 1024).toFixed(2) + " Мбит/с";
+          document.getElementById("statClientDownloadSpeed").textContent = 
+            (currentStats.clientDownloadSpeed * 8 / 1024 / 1024).toFixed(2) + " Мбит/с";
           document.getElementById("statTorrentSize").textContent = 
             formatFileSize(currentStats.torrentSize);
         }
@@ -1014,6 +1020,7 @@
           updateElement("statTotalPeers", stats.totalPeers.toString());
           updateElement("statActivePeers", stats.activePeers.toString());
           updateElement("statDownloadSpeed", (stats.downloadSpeed * 8 / 1024 / 1024).toFixed(2) + " Мбит/с");
+          updateElement("statClientDownloadSpeed", (stats.clientDownloadSpeed * 8 / 1024 / 1024).toFixed(2) + " Мбит/с");
           updateElement("statTorrentSize", formatFileSize(stats.torrentSize));
         }
       });

@@ -584,7 +584,8 @@ function startStatsUpdate(): void {
           pendingPeers: data["pending_peers"] || 0,
           downloadSpeed: data["download_speed"] || 0,
           uploadSpeed: data["upload_speed"] || 0,
-          torrentSize: data["torrent_size"] || 0
+          torrentSize: data["torrent_size"] || 0,
+          clientDownloadSpeed: data["client_download_speed"] || 0
         };
 
         if (wizardWindow && !wizardWindow.isDestroyed()) {
@@ -774,11 +775,13 @@ async function fetchWithRetryWizard(
         pendingPeers: data["pending_peers"] || 0,
         downloadSpeed: data["download_speed"] || 0,
         uploadSpeed: data["upload_speed"] || 0,
-        torrentSize: data["torrent_size"] || 0
+        torrentSize: data["torrent_size"] || 0,
+        clientDownloadSpeed: data["client_download_speed"] || 0
       };
 
       logToWizard(`Пиры: ${torrentStats.totalPeers} (активных: ${torrentStats.activePeers})`, 'info');
       logToWizard(`Скорость загрузки(сервер): ${(torrentStats.downloadSpeed / 1024 / 1024).toFixed(2)} MB/s`, 'info');
+      logToWizard(`Скорость загрузки(клиент): ${(torrentStats.clientDownloadSpeed / 1024 / 1024).toFixed(2)} MB/s`, 'info');
 
       if (wizardWindow && !wizardWindow.isDestroyed()) {
         wizardWindow.webContents.send('files-received', { 
