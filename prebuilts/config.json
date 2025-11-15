@@ -10,14 +10,17 @@
   "lumex_cdn_filter_url": "https://*.lumex.space/*",
   "url_handler_deny": "https://reyohoho.",
   "torr_server_urls": [
+    "https://trsrv3.reyohoho.space/",
     "https://trsrv1.reyohoho.space/",
     "https://trsrv2.reyohoho.space/"
   ],
   "torr_server_locations": [
+    "Москва NEW",
     "Москва",
     "Нидерланды"
   ],
   "torr_server_speedtest_urls": [
+    "http://147.45.185.49:3400/",
     "http://5.45.82.118:3400/",
     "http://45.139.77.155:3400/"
   ]
