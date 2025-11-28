@@ -57,7 +57,7 @@ function createMenu(): Menu {
               }
             },
             {
-              label: 'Альтернативный (rhhhhhhh.live)',
+              label: 'Альтернативный (tp.rhserv.vu)',
               type: 'radio',
               checked: selectedParser === 'alternative',
               click: () => {
@@ -292,7 +292,7 @@ export async function createTorrentsWindow(kpTitle: string, year: string | null,
                   click: () => switchTorrentParser('primary')
                 },
                 {
-                  label: 'Альтернативный (rhhhhhhh.live)',
+                  label: 'Альтернативный (tp.rhserv.vu)',
                   type: 'radio',
                   checked: store.get('selected_torrent_parser', 'primary') === 'alternative',
                   click: () => switchTorrentParser('alternative')
@@ -519,7 +519,7 @@ ipcMain.on('open-parser-selection', () => {
             click: () => switchTorrentParser('primary')
           },
           {
-            label: 'Альтернативный (rhhhhhhh.live)',
+            label: 'Альтернативный (tp.rhserv.vu)',
             type: 'radio',
             checked: store.get('selected_torrent_parser', 'primary') === 'alternative',
             click: () => switchTorrentParser('alternative')
