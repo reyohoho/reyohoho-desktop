@@ -23,6 +23,8 @@ const store = new Store({});
 
 const isDebug = !app.isPackaged;
 
+const hasSingleInstanceFlag = process.argv.includes('--single-instance');
+
 const config_main_path = path.join(__dirname, '../prebuilts/config.json');
 const adblock_path = path.join(__dirname, '../prebuilts/adblock.txt');
 
@@ -1032,6 +1034,33 @@ function createAuthWindow(): Promise<{ login: string; password: string } | null>
 
 app.whenReady().then(() => {
   app.setAsDefaultProtocolClient('reyohoho');
+
+  if (hasSingleInstanceFlag) {
+    const gotTheLock = app.requestSingleInstanceLock();
+    
+    if (!gotTheLock) {
+      app.quit();
+      return;
+    }
+    
+    app.on('second-instance', (event, commandLine, workingDirectory) => {
+      if (mainWindow) {
+        if (mainWindow.isMinimized()) {
+          mainWindow.restore();
+        }
+        mainWindow.focus();
+        mainWindow.show();
+      }
+      
+      if (process.platform === 'win32' || process.platform === 'linux') {
+        const url = commandLine.find(arg => arg.startsWith('reyohoho://'));
+        if (url && mainWindow) {
+          deep_link_data = url.replace('reyohoho://', '');
+          mainWindow.loadURL(`${main_site_url!}/${deep_link_data}`);
+        }
+      }
+    });
+  }
 
   ipcMain.handle('get-stored-credentials', () => {
     return {
