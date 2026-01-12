@@ -272,8 +272,10 @@ export interface AppConfig {
   lumex_referer: string,
   lumex_cdn_filter_url: string,
   url_handler_deny: string,
+  monitor_server_url?: string,
   torr_server_urls: string[],
   torr_server_locations: string[],
+  torr_server_ids?: string[],
   torr_server_speedtest_urls: string[],
 }
 

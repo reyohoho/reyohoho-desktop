@@ -186,6 +186,170 @@
         background: #1e1e2e;
       }
 
+      .servers-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 16px;
+        margin-bottom: 20px;
+      }
+
+      .server-card {
+        background: #11111b;
+        border: 2px solid #313244;
+        border-radius: 12px;
+        padding: 20px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        position: relative;
+      }
+
+      .server-card:hover {
+        border-color: #585b70;
+        background: #1e1e2e;
+      }
+
+      .server-card.selected {
+        border-color: #89b4fa;
+        background: #1e1e2e;
+      }
+
+      .server-card.offline {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+
+      .server-card.offline:hover {
+        border-color: #313244;
+        background: #11111b;
+      }
+
+      .server-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+
+      .server-name {
+        font-size: 16px;
+        font-weight: 600;
+        color: #cdd6f4;
+      }
+
+      .server-status {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #45475a;
+      }
+
+      .server-status.online {
+        background: #a6e3a1;
+        box-shadow: 0 0 8px #a6e3a1;
+      }
+
+      .server-status.offline {
+        background: #f38ba8;
+      }
+
+      .server-metrics {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-size: 13px;
+      }
+
+      .metric-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .metric-label {
+        color: #a6adc8;
+      }
+
+      .metric-value {
+        color: #cdd6f4;
+        font-weight: 600;
+      }
+
+      .metric-bar-container {
+        width: 100%;
+        height: 6px;
+        background: #313244;
+        border-radius: 3px;
+        overflow: hidden;
+        margin-top: 4px;
+      }
+
+      .metric-bar {
+        height: 100%;
+        background: #89b4fa;
+        border-radius: 3px;
+        transition: width 0.3s ease;
+      }
+
+      .metric-bar.high {
+        background: #f9e2af;
+      }
+
+      .metric-bar.critical {
+        background: #f38ba8;
+      }
+
+      .server-loading {
+        text-align: center;
+        color: #a6adc8;
+        padding: 20px;
+        font-size: 14px;
+      }
+
+      .server-footer {
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #313244;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+
+      .server-footer .btn {
+        padding: 8px 16px;
+        font-size: 12px;
+        width: 100%;
+      }
+
+      .btn-speedtest {
+        background: #313244;
+        color: #cdd6f4;
+        text-decoration: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+      }
+
+      .btn-speedtest:hover {
+        background: #45475a;
+      }
+
+      .monitoring-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 11px;
+        color: #6c7086;
+        padding: 4px 8px;
+        background: #313244;
+        border-radius: 4px;
+      }
+
+      .monitoring-badge.connected {
+        color: #a6e3a1;
+        background: rgba(166, 227, 161, 0.1);
+      }
+
       .btn {
         padding: 12px 24px;
         border: none;
@@ -434,15 +598,20 @@
           <div id="step1" class="step-content">
             <div class="card">
               <div class="form-group">
-                <label for="serverSelect">Доступные серверы:</label>
-                <select id="serverSelect" class="form-control"></select>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                  <label style="margin-bottom: 0;">Доступные серверы:</label>
+                  <div id="monitoringStatus" class="monitoring-badge">
+                    <div style="width: 6px; height: 6px; border-radius: 50%; background: #6c7086;"></div>
+                    <span>Подключение...</span>
+                  </div>
+                </div>
+                <div id="serversGrid" class="servers-grid">
+                  <div class="server-loading">Загрузка серверов...</div>
+                </div>
               </div>
               <div class="button-group">
-                <button id="btnSelectServer" class="btn btn-primary">
+                <button id="btnSelectServer" class="btn btn-primary" disabled>
                   Продолжить
-                </button>
-                <button id="btnTestSpeed" class="btn btn-secondary">
-                  Тестировать скорость до сервера
                 </button>
               </div>
             </div>
@@ -610,6 +779,11 @@
       let torrentFiles = [];
       let selectedFiles = [];
       let currentStats = null;
+      
+      let monitorWs = null;
+      let serversData = [];
+      let serverMetrics = {};
+      let monitorServerUrl = "";
 
       function updateStep(step, allowNavigation = false) {
         if (step > maxAvailableStep) {
@@ -694,38 +868,241 @@
         }
       }
 
-      let serversData = [];
+      function updateMonitoringStatus(connected) {
+        const badge = document.getElementById('monitoringStatus');
+        if (!badge) return;
+        
+        if (connected) {
+          badge.className = 'monitoring-badge connected';
+          badge.innerHTML = `
+            <div style="width: 6px; height: 6px; border-radius: 50%; background: #a6e3a1; box-shadow: 0 0 4px #a6e3a1;"></div>
+            <span>Мониторинг активен</span>
+          `;
+        } else {
+          badge.className = 'monitoring-badge';
+          badge.innerHTML = `
+            <div style="width: 6px; height: 6px; border-radius: 50%; background: #6c7086;"></div>
+            <span>Без мониторинга</span>
+          `;
+        }
+      }
+
+      function initMonitorWebSocket() {
+        if (!monitorServerUrl) {
+          updateMonitoringStatus(false);
+          return;
+        }
+
+        try {
+          const wsUrl = monitorServerUrl.replace('http://', 'ws://').replace('https://', 'wss://');
+          monitorWs = new WebSocket(wsUrl);
+
+          monitorWs.onopen = () => {
+            console.log('Connected to monitoring server');
+            addLog('Подключено к серверу мониторинга', 'success');
+            updateMonitoringStatus(true);
+          };
+
+          monitorWs.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            
+            if (data.type === 'init') {
+              serverMetrics = data.metrics;
+              updateServersDisplay();
+            } else if (data.type === 'metrics') {
+              serverMetrics[data.serverId] = data.metrics;
+              updateServerCard(data.serverId, data.metrics);
+            }
+          };
+
+          monitorWs.onerror = (error) => {
+            console.error('WebSocket error:', error);
+            addLog('Ошибка подключения к серверу мониторинга (работа без метрик)', 'warning');
+            updateMonitoringStatus(false);
+            updateServersDisplay();
+          };
+
+          monitorWs.onclose = () => {
+            console.log('Disconnected from monitoring server');
+            updateMonitoringStatus(false);
+          };
+        } catch (error) {
+          console.error('Failed to connect to monitoring server:', error);
+          addLog('Не удалось подключиться к серверу мониторинга (работа без метрик)', 'warning');
+          updateMonitoringStatus(false);
+          updateServersDisplay();
+        }
+      }
+
+      function createServerCard(server, index, metrics) {
+        const hasMetrics = metrics && metrics.status;
+        const isOnline = hasMetrics ? metrics.status === 'online' : true;
+        const cpu = hasMetrics ? metrics.cpu.toFixed(1) : '-';
+        const ram = hasMetrics ? metrics.ram.toFixed(1) : '-';
+        const netUp = hasMetrics ? formatMegabits(metrics.network.upload) : '-';
+        const netDown = hasMetrics ? formatMegabits(metrics.network.download) : '-';
+        
+        const netUpMbps = hasMetrics ? (metrics.network.upload * 8) / 1000000 : 0;
+        const netUpPercent = Math.min((netUpMbps / 1000) * 100, 100);
+
+        const statusClass = hasMetrics ? (isOnline ? 'online' : 'offline') : '';
+        const cardClass = hasMetrics ? (isOnline ? '' : 'offline') : '';
+
+        return `
+          <div class="server-card ${cardClass}" data-server-index="${index}" data-server-id="${server.id}">
+            <div class="server-header">
+              <div class="server-name">${server.location}</div>
+              ${hasMetrics ? `<div class="server-status ${statusClass}"></div>` : '<div class="server-status" style="background: #6c7086;"></div>'}
+            </div>
+            <div class="server-metrics">
+              <div class="metric-row">
+                <span class="metric-label">CPU:</span>
+                <span class="metric-value" id="cpu-${server.id}">${hasMetrics ? cpu + '%' : '-'}</span>
+              </div>
+              
+              <div class="metric-row">
+                <span class="metric-label">RAM:</span>
+                <span class="metric-value" id="ram-${server.id}">${hasMetrics ? ram + '%' : '-'}</span>
+              </div>
+              
+              <div class="metric-row">
+                <span class="metric-label">Network ↓:</span>
+                <span class="metric-value" id="net-down-${server.id}">${netDown}</span>
+              </div>
+              
+              <div class="metric-row">
+                <span class="metric-label">Network ↑:</span>
+                <span class="metric-value" id="net-up-${server.id}">${netUp}</span>
+              </div>
+            </div>
+            
+            ${hasMetrics ? `<div class="metric-bar-container" style="margin: 12px 0 0 0;">
+              <div class="metric-bar ${netUpPercent > 80 ? 'critical' : netUpPercent > 60 ? 'high' : ''}" 
+                   id="net-up-bar-${server.id}" style="width: ${netUpPercent}%"></div>
+            </div>` : ''}
+            
+            <div class="server-footer">
+              <a href="${server.speedtestUrl}" target="_blank" class="btn btn-speedtest" onclick="event.stopPropagation();">
+                ⚡ Speed Test
+              </a>
+            </div>
+          </div>
+        `;
+      }
+
+      function updateServersDisplay() {
+        const grid = document.getElementById('serversGrid');
+        if (!grid) return;
+
+        grid.innerHTML = '';
+        
+        serversData.forEach((server, index) => {
+          const metrics = serverMetrics[server.id];
+          const cardHtml = createServerCard(server, index, metrics);
+          grid.insertAdjacentHTML('beforeend', cardHtml);
+        });
+
+        document.querySelectorAll('.server-card').forEach(card => {
+          card.addEventListener('click', () => {
+            if (card.classList.contains('offline')) {
+              addLog('Сервер недоступен', 'error');
+              return;
+            }
+
+            document.querySelectorAll('.server-card').forEach(c => c.classList.remove('selected'));
+            card.classList.add('selected');
+            
+            selectedServer = card.dataset.serverIndex;
+            const server = serversData[selectedServer];
+            if (server) {
+              selectedServerName = server.location;
+            }
+
+            document.getElementById('btnSelectServer').disabled = false;
+          });
+        });
+      }
+
+      function updateServerCard(serverId, metrics) {
+        const card = document.querySelector(`[data-server-id="${serverId}"]`);
+        if (!card) return;
+
+        const isOnline = metrics.status === 'online';
+        const cpu = metrics.cpu.toFixed(1);
+        const ram = metrics.ram.toFixed(1);
+        const netUp = formatMegabits(metrics.network.upload);
+        const netDown = formatMegabits(metrics.network.download);
+        
+        const netUpMbps = (metrics.network.upload * 8) / 1000000;
+        const netUpPercent = Math.min((netUpMbps / 1000) * 100, 100);
+
+        const cpuEl = document.getElementById(`cpu-${serverId}`);
+        if (cpuEl) cpuEl.textContent = `${cpu}%`;
+
+        const ramEl = document.getElementById(`ram-${serverId}`);
+        if (ramEl) ramEl.textContent = `${ram}%`;
+
+        const netDownEl = document.getElementById(`net-down-${serverId}`);
+        const netUpEl = document.getElementById(`net-up-${serverId}`);
+        if (netDownEl) netDownEl.textContent = netDown;
+        if (netUpEl) netUpEl.textContent = netUp;
+
+        const netUpBarEl = document.getElementById(`net-up-bar-${serverId}`);
+        if (netUpBarEl) {
+          netUpBarEl.style.width = `${netUpPercent}%`;
+          netUpBarEl.className = `metric-bar ${netUpPercent > 80 ? 'critical' : netUpPercent > 60 ? 'high' : ''}`;
+        } else {
+          const metricsDiv = card.querySelector('.server-metrics');
+          const footer = card.querySelector('.server-footer');
+          if (metricsDiv && footer && !card.querySelector('#net-up-bar-' + serverId)) {
+            const barContainer = document.createElement('div');
+            barContainer.className = 'metric-bar-container';
+            barContainer.style.margin = '12px 0 0 0';
+            barContainer.innerHTML = `<div class="metric-bar ${netUpPercent > 80 ? 'critical' : netUpPercent > 60 ? 'high' : ''}" id="net-up-bar-${serverId}" style="width: ${netUpPercent}%"></div>`;
+            footer.parentNode.insertBefore(barContainer, footer);
+          }
+        }
+
+        const statusEl = card.querySelector('.server-status');
+        if (statusEl) {
+          statusEl.className = `server-status ${isOnline ? 'online' : 'offline'}`;
+          statusEl.style.background = '';
+        }
+        
+        if (isOnline) {
+          card.classList.remove('offline');
+        } else {
+          card.classList.add('offline');
+        }
+      }
+
+      function formatMegabits(bytesPerSecond) {
+        const megabits = (bytesPerSecond * 8) / 1000000;
+        
+        if (megabits < 0.1) {
+          return '0.0 Mb/s';
+        } else if (megabits < 10) {
+          return megabits.toFixed(1) + ' Mb/s';
+        } else {
+          return megabits.toFixed(0) + ' Mb/s';
+        }
+      }
 
       ipcRenderer.on("init-wizard", (event, data) => {
         magnetUrl = data.magnetUrl;
         serversData = data.servers;
+        monitorServerUrl = data.monitorServerUrl;
 
         const logContainer = document.getElementById("logContainer");
         logContainer.innerHTML = "";
 
         addLog(`Версия: ${data.appVersion}`, "info");
-
-        const serverSelect = document.getElementById("serverSelect");
-        data.servers.forEach((server, index) => {
-          const option = document.createElement("option");
-          option.value = index;
-          option.textContent = `${server.location} - ${server.url}`;
-          serverSelect.appendChild(option);
-        });
-        
-        // Update test speed button text when server selection changes
-        const updateTestSpeedButton = () => {
-          const serverIndex = serverSelect.value;
-          const btnTestSpeed = document.getElementById("btnTestSpeed");
-          if (serversData[serverIndex]) {
-            btnTestSpeed.textContent = `Тестировать скорость до сервера (${serversData[serverIndex].location})`;
-          }
-        };
-        
-        serverSelect.addEventListener("change", updateTestSpeedButton);
-        updateTestSpeedButton(); // Initial update
-
         addLog(`Magnet URL: ${magnetUrl.substring(0, 100)}...`);
+        
+        initMonitorWebSocket();
+        
+        // Show initial server cards (without metrics)
+        updateServersDisplay();
 
         if (data.platform !== "win32") {
           const internalPlayerBtn =
@@ -749,39 +1126,25 @@
       document
         .getElementById("btnSelectServer")
         .addEventListener("click", () => {
-          const serverIndex = document.getElementById("serverSelect").value;
-          selectedServer = serverIndex;
-          
-          // Save server name
-          if (serversData[serverIndex]) {
-            selectedServerName = serversData[serverIndex].location;
+          if (selectedServer === "") {
+            addLog("Выберите сервер", "error");
+            return;
           }
 
-          addLog(`Выбран сервер #${parseInt(serverIndex) + 1}`);
+          const serverIndex = parseInt(selectedServer);
+          const server = serversData[serverIndex];
+          
+          if (!server) {
+            addLog("Ошибка: сервер не найден", "error");
+            return;
+          }
+
+          addLog(`Выбран сервер: ${server.location}`, "info");
           updateStep(2);
 
           ipcRenderer.send("server-selected", {
-            serverIndex: parseInt(serverIndex),
+            serverIndex: serverIndex,
           });
-        });
-
-      document
-        .getElementById("btnTestSpeed")
-        .addEventListener("click", () => {
-          const serverIndex = document.getElementById("serverSelect").value;
-          
-          if (serversData[serverIndex] && serversData[serverIndex].speedtestUrl) {
-            const speedtestUrl = serversData[serverIndex].speedtestUrl;
-            const serverName = serversData[serverIndex].location;
-            
-            addLog(`Открытие теста скорости для сервера: ${serverName}`, "info");
-            
-            // Open speedtest URL in external browser
-            const { shell } = require("electron");
-            shell.openExternal(speedtestUrl);
-          } else {
-            addLog("URL теста скорости не найден для выбранного сервера", "error");
-          }
         });
 
       document.getElementById("btnSelectAll").addEventListener("click", () => {
@@ -1064,6 +1427,13 @@
       }
 
       updateStep(1);
+
+      // Cleanup on window close
+      window.addEventListener('beforeunload', () => {
+        if (monitorWs) {
+          monitorWs.close();
+        }
+      });
     </script>
   </body>
 </html>

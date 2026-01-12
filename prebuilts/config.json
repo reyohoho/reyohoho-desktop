@@ -9,6 +9,7 @@
   "lumex_referer": "lumex",
   "lumex_cdn_filter_url": "https://*.lumex.space/*",
   "url_handler_deny": "https://reyohoho.",
+  "monitor_server_url": "http://178.253.42.84:3000",
   "torr_server_urls": [
     "https://trsrv3.reyohoho.space/",
     "https://trsrv1.reyohoho.space/",
@@ -20,6 +21,12 @@
     "Москва (trsrv1)",
     "Москва Резерв(trsrv4)",
     "Нидерланды"
+  ],
+  "torr_server_ids": [
+    "trsrv3",
+    "trsrv1",
+    "trsrv4",
+    "trsrv2"
   ],
   "torr_server_speedtest_urls": [
     "http://147.45.185.49:3400/",

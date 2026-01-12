@@ -114,7 +114,8 @@ function createWizardWindow(magnetUrl: string): void {
     const servers = appConfig!.torr_server_urls.map((url, index) => ({
       url,
       location: appConfig!.torr_server_locations[index],
-      speedtestUrl: appConfig!.torr_server_speedtest_urls[index]
+      speedtestUrl: appConfig!.torr_server_speedtest_urls[index],
+      id: (appConfig as any).torr_server_ids?.[index] || `server${index}`
     }));
 
     wizardWindow?.webContents.send('init-wizard', {
@@ -122,7 +123,8 @@ function createWizardWindow(magnetUrl: string): void {
       servers,
       appVersion: app.getVersion(),
       appName: APP_NAME,
-      platform: process.platform
+      platform: process.platform,
+      monitorServerUrl: (appConfig as any).monitor_server_url || 'http://178.253.42.84:3000'
     });
   });
 
