@@ -12,15 +12,18 @@
   "torr_server_urls": [
     "https://trsrv3.reyohoho.space/",
     "https://trsrv1.reyohoho.space/",
+    "https://trsrv4.reyohoho.space/",
     "https://trsrv2.reyohoho.space/"
   ],
   "torr_server_locations": [
-    "Москва NEW",
-    "Москва",
+    "Москва (trsrv3)",
+    "Москва (trsrv1)",
+    "Москва Резерв(trsrv4)",
     "Нидерланды"
   ],
   "torr_server_speedtest_urls": [
     "http://147.45.185.49:3400/",
+    "http://85.239.37.87:3400/",
     "http://5.45.82.118:3400/",
     "http://45.139.77.155:3400/"
   ]
