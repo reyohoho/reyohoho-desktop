@@ -1149,7 +1149,7 @@ app.on('browser-window-blur', () => {
   globalShortcut.unregister('F9');
   globalShortcut.unregister('F10');
   globalShortcut.unregister('F11');
-  globalShortcut.unregister('CommandOrControl+R');
+  globalShortcut.unregister('CommandOrControl+F5');
 })
 
 app.on('window-all-closed', () => {
