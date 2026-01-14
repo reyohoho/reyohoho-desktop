@@ -32,7 +32,7 @@ const videoExtensions = [".webm", ".mkv", ".flv", ".vob", ".ogv", ".ogg", ".rrc"
 function createMenu(): Menu {
   const selectedParser = store.get('selected_torrent_parser', 'primary') as string;
 
-  return Menu.buildFromTemplate([
+  const template: (Electron.MenuItemConstructorOptions | Electron.MenuItem)[] = [
     {
       label: 'Настройки',
       submenu: [
@@ -68,7 +68,26 @@ function createMenu(): Menu {
         }
       ]
     }
-  ]);
+  ];
+
+  if (process.platform === 'darwin') {
+    template.unshift({
+      label: app.getName(),
+      submenu: [
+        { role: 'about' },
+        { type: 'separator' },
+        { role: 'services' },
+        { type: 'separator' },
+        { role: 'hide' },
+        { role: 'hideOthers' },
+        { role: 'unhide' },
+        { type: 'separator' },
+        { role: 'quit' }
+      ]
+    });
+  }
+
+  return Menu.buildFromTemplate(template);
 }
 
 if (!AbortSignal.timeout) {
@@ -103,7 +122,7 @@ function createWizardWindow(magnetUrl: string): void {
     }
   });
 
-  wizardWindow.setMenu(null);
+  wizardWindow.setMenu(createMenu());
   wizardWindow.loadFile("torrent-wizard.html");
 
   wizardWindow.once('ready-to-show', () => {
@@ -180,7 +199,7 @@ function openMagnetInputDialog(): void {
     }
   });
 
-  magnetInputWindow.setMenu(null);
+  magnetInputWindow.setMenu(createMenu());
   magnetInputWindow.loadFile("magnet-input.html");
 
   magnetInputWindow.once('ready-to-show', () => {
@@ -208,12 +227,7 @@ function switchTorrentParser(parserType: 'primary' | 'alternative'): void {
 
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.loadURL(`${parserUrl}/index3.html?rand=${Date.now()}`);
-
-    if (process.platform !== 'darwin') {
-      mainWindow.setMenu(createMenu());
-    } else {
-      Menu.setApplicationMenu(createMenu());
-    }
+    Menu.setApplicationMenu(createMenu());
   }
 }
 
@@ -265,11 +279,7 @@ export async function createTorrentsWindow(kpTitle: string, year: string | null,
 
   setupButtons(kpTitle, year, altname);
 
-  if (process.platform !== 'darwin') {
-    mainWindow?.setMenu(createMenu());
-  } else {
-    Menu.setApplicationMenu(createMenu());
-  }
+  Menu.setApplicationMenu(createMenu());
 
   mainWindow?.loadURL(`${getCurrentTorrentParserUrl()}/index3.html?rand=${Date.now()}`);
 
