@@ -966,12 +966,12 @@
               </div>
               
               <div class="metric-row">
-                <span class="metric-label">Network ↓:</span>
+                <span class="metric-label">Network  download:</span>
                 <span class="metric-value" id="net-down-${server.id}">${netDown}</span>
               </div>
               
               <div class="metric-row">
-                <span class="metric-label">Network ↑:</span>
+                <span class="metric-label">Network upload:</span>
                 <span class="metric-value" id="net-up-${server.id}">${netUp}</span>
               </div>
             </div>
@@ -979,7 +979,7 @@
             ${hasMetrics ? `
             <div style="margin-top: 12px; padding: 8px; background: rgba(137, 180, 250, 0.1); border-radius: 6px;">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <span style="font-size: 11px; color: #89b4fa; font-weight: 600;">Upload(нагрузка на отдачу клиентам на сервере)</span>
+                <span style="font-size: 11px; color: #89b4fa; font-weight: 600;">Upload(нагрузка на отдачу клиентам)</span>
                 <span id="net-up-percent-${server.id}" style="font-size: 11px; color: #a6adc8;">${netUpPercent.toFixed(0)}% от 1 Gbit/s</span>
               </div>
               <div class="metric-bar-container" style="margin: 0;">
@@ -1074,7 +1074,7 @@
             uploadSection.style.borderRadius = '6px';
             uploadSection.innerHTML = `
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
-                <span style="font-size: 11px; color: #89b4fa; font-weight: 600;">Upload(нагрузка на отдачу клиентам на сервере)</span>
+                <span style="font-size: 11px; color: #89b4fa; font-weight: 600;">Upload(нагрузка на отдачу клиентам)</span>
                 <span id="net-up-percent-${serverId}" style="font-size: 11px; color: #a6adc8;">${netUpPercent.toFixed(0)}% от 1 Gbit/s</span>
               </div>
               <div class="metric-bar-container" style="margin: 0;">
