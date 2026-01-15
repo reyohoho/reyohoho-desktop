@@ -36,6 +36,56 @@ let deep_link_data: String | null;
 
 let authWindow: BrowserWindow | null = null;
 
+function createMacOSMenu(): Menu | null {
+  if (process.platform !== 'darwin') {
+    return null;
+  }
+
+  return Menu.buildFromTemplate([
+    {
+      label: app.getName(),
+      submenu: [
+        { role: 'about' },
+        { type: 'separator' },
+        { role: 'services' },
+        { type: 'separator' },
+        { role: 'hide' },
+        { role: 'hideOthers' },
+        { role: 'unhide' },
+        { type: 'separator' },
+        { role: 'quit' }
+      ]
+    },
+    {
+      label: 'Edit',
+      submenu: [
+        { role: 'undo' },
+        { role: 'redo' },
+        { type: 'separator' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'selectAll' }
+      ]
+    },
+    {
+      label: 'Window',
+      submenu: [
+        { role: 'minimize' },
+        { role: 'zoom' },
+        { type: 'separator' },
+        { role: 'front' }
+      ]
+    }
+  ]);
+}
+
+function setMainWindowMenu(): void {
+  if (process.platform === 'darwin') {
+    Menu.setApplicationMenu(createMacOSMenu());
+  }
+}
+
 const reload = (): void => {
   if (mainWindow?.webContents.getURL().includes("loader.html")) {
     mainWindow?.loadURL(main_site_url!);
@@ -458,7 +508,11 @@ async function createWindow(configError: any | ''): Promise<void> {
     }
   });
 
-  mainWindow.setMenu(null);
+  if (process.platform === 'darwin') {
+    setMainWindowMenu();
+  } else {
+    mainWindow.setMenu(null);
+  }
   mainWindow?.loadFile("loader.html");
 
   mainWindow.setTitle(APP_NAME + ' Loading ....');
@@ -850,6 +904,7 @@ async function createWindow(configError: any | ''): Promise<void> {
 
   mainWindow.on('focus', function () {
     registerHotkeys();
+    setMainWindowMenu();
   })
 
   ipcMain.on('on-hotkey', (event, key) => {

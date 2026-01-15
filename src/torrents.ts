@@ -122,7 +122,11 @@ function createWizardWindow(magnetUrl: string): void {
     }
   });
 
-  wizardWindow.setMenu(createMenu());
+  if (process.platform === 'darwin') {
+    Menu.setApplicationMenu(createMenu());
+  } else {
+    wizardWindow.setMenu(createMenu());
+  }
   wizardWindow.loadFile("torrent-wizard.html");
 
   wizardWindow.once('ready-to-show', () => {
@@ -155,6 +159,12 @@ function createWizardWindow(magnetUrl: string): void {
     currentTorrentHash = null;
     storedPlayUrls = [];
     storedTorrentFiles = [];
+  });
+
+  wizardWindow.on('focus', function () {
+    if (process.platform === 'darwin') {
+      Menu.setApplicationMenu(createMenu());
+    }
   });
 
   currentMagnetUrl = magnetUrl;
@@ -227,7 +237,11 @@ function switchTorrentParser(parserType: 'primary' | 'alternative'): void {
 
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.loadURL(`${parserUrl}/index3.html?rand=${Date.now()}`);
-    Menu.setApplicationMenu(createMenu());
+    if (process.platform === 'darwin') {
+      Menu.setApplicationMenu(createMenu());
+    } else {
+      mainWindow.setMenu(createMenu());
+    }
   }
 }
 
@@ -279,7 +293,11 @@ export async function createTorrentsWindow(kpTitle: string, year: string | null,
 
   setupButtons(kpTitle, year, altname);
 
-  Menu.setApplicationMenu(createMenu());
+  if (process.platform === 'darwin') {
+    Menu.setApplicationMenu(createMenu());
+  } else {
+    mainWindow.setMenu(createMenu());
+  }
 
   mainWindow?.loadURL(`${getCurrentTorrentParserUrl()}/index3.html?rand=${Date.now()}`);
 
@@ -322,6 +340,12 @@ export async function createTorrentsWindow(kpTitle: string, year: string | null,
 
   mainWindow.on('closed', function () {
     mainWindow = null
+  })
+
+  mainWindow.on('focus', function () {
+    if (process.platform === 'darwin') {
+      Menu.setApplicationMenu(createMenu());
+    }
   })
 }
 
