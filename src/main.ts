@@ -367,9 +367,9 @@ function registerHotkeys(): void {
   globalShortcut.register('F8', increasePlaybackSpeed);
   globalShortcut.register('F9', changeCredentials);
   globalShortcut.register('F10', toggleMenu);
-  globalShortcut.register('F11', () => {
-    mainWindow?.webContents.toggleDevTools();
-  });
+  // globalShortcut.register('F11', () => {
+  //   mainWindow?.webContents.toggleDevTools();
+  // });
   globalShortcut.register('CommandOrControl+F5', reloadIgnoringCache);
 }
 
@@ -408,7 +408,7 @@ function createMirrorSelectionWindow(): Promise<string | null> {
     });
 
     const handleMirrorSelected = (event: any, selectedMirror: string) => {
-      store.set("user_mirror", selectedMirror);
+      store.set("user_mirror2", selectedMirror);
       main_site_url = selectedMirror;
       mainWindow?.loadURL(main_site_url);
 
@@ -467,7 +467,7 @@ async function createWindow(configError: any | ''): Promise<void> {
         preload: path.join(__dirname, 'preload.js'),
         contextIsolation: true,
         webSecurity: false,
-        devTools: true,
+        devTools: false,
       }
     });
   }
@@ -497,7 +497,7 @@ async function createWindow(configError: any | ''): Promise<void> {
     store.set('bounds', mainWindow!.getBounds())
   })
 
-  main_site_url = store.get('user_mirror', appConfig!.main_site_url) as string;
+  main_site_url = store.get('user_mirror2', appConfig!.main_site_url) as string;
 
   mainWindow.once('ready-to-show', () => {
     mainWindow?.maximize();
@@ -1127,7 +1127,7 @@ app.whenReady().then(() => {
   });
 
   ipcMain.handle('get-stored-mirror', () => {
-    return store.get('user_mirror', appConfig?.main_site_url || '') as string;
+    return store.get('user_mirror2', appConfig?.main_site_url || '') as string;
   });
 
   ipcMain.handle('open-external', (event, url) => {
@@ -1139,14 +1139,12 @@ app.whenReady().then(() => {
 http://37.252.0.116:4433/check.html
 
 Новый фронтенд:
-https://reyohoho-gitlab.vercel.app/
-https://reyohoho.gitlab.io/reyohoho/
-https://reyohoho.serv00.net/
-https://reyohoho.onrender.com/
+https://reyohoho.github.io/reyohoho
+https://reyohoho.gitlab.io/reyohoho
+https://reyohoho.serv00.net
 
 Старый фронтенд:
-https://reyohoho.vercel.app/
-https://reyohoho.surge.sh/
+https://reyohoho.surge.sh
 `;
   });
 
@@ -1205,7 +1203,7 @@ app.on('browser-window-blur', () => {
   globalShortcut.unregister('F8');
   globalShortcut.unregister('F9');
   globalShortcut.unregister('F10');
-  globalShortcut.unregister('F11');
+  // globalShortcut.unregister('F11');
   globalShortcut.unregister('CommandOrControl+F5');
 })
 
