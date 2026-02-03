@@ -688,10 +688,7 @@
                     Внутренний (mpv)
                   </button>
                   <button id="btnExternalPlayer" class="btn btn-secondary">
-                    Внешний плеер
-                  </button>
-                  <button id="btnChoosePlayer" class="btn btn-secondary">
-                    Сменить внешний плеер
+                    <span id="externalPlayerBtnText">Внешний плеер</span>
                   </button>
                 </div>
               </div>
@@ -784,6 +781,7 @@
       let serversData = [];
       let serverMetrics = {};
       let monitorServerUrl = "";
+      let externalPlayerInfo = null;
 
       function updateStep(step, allowNavigation = false) {
         if (step > maxAvailableStep) {
@@ -865,6 +863,22 @@
         if (stepElement) {
           stepElement.classList.remove("active", "completed");
           stepElement.classList.add("error");
+        }
+      }
+
+      function updateExternalPlayerDisplay(playerInfo) {
+        externalPlayerInfo = playerInfo;
+        
+        const btnText = document.getElementById('externalPlayerBtnText');
+        
+        if (playerInfo && playerInfo.name) {
+          if (btnText) {
+            btnText.textContent = `Внешний (${playerInfo.name})`;
+          }
+        } else {
+          if (btnText) {
+            btnText.textContent = 'Внешний плеер';
+          }
         }
       }
 
@@ -1121,6 +1135,11 @@
         addLog(`Версия: ${data.appVersion}`, "info");
         addLog(`Magnet URL: ${magnetUrl.substring(0, 100)}...`);
         
+        if (data.externalPlayer) {
+          updateExternalPlayerDisplay(data.externalPlayer);
+          addLog(`Внешний плеер: ${data.externalPlayer.name} (${data.externalPlayer.path})`, "info");
+        }
+        
         initMonitorWebSocket();
         
         // Show initial server cards (without metrics)
@@ -1143,6 +1162,13 @@
             }
           });
         });
+      });
+
+      ipcRenderer.on("external-player-updated", (event, playerInfo) => {
+        updateExternalPlayerDisplay(playerInfo);
+        if (playerInfo) {
+          addLog(`Плеер изменен: ${playerInfo.name}`, "success");
+        }
       });
 
       document
@@ -1235,13 +1261,7 @@
       document
         .getElementById("btnExternalPlayer")
         .addEventListener("click", () => {
-          addLog("Выбран внешний плеер");
-          ipcRenderer.send("player-selected", { playerType: "external" });
-        });
-
-      document
-        .getElementById("btnChoosePlayer")
-        .addEventListener("click", () => {
+          addLog("Выбор внешнего плеера...");
           ipcRenderer.send("choose-player-path");
         });
 
@@ -1385,7 +1405,7 @@
       }
 
       ipcRenderer.on("auto-choose-player", (event, data) => {
-        document.getElementById("btnChoosePlayer").click();
+        document.getElementById("btnExternalPlayer").click();
       });
 
       ipcRenderer.on("stats-update", (event, data) => {
