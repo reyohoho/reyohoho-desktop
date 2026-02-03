@@ -473,6 +473,24 @@
       .file-size {
         color: #a6adc8;
         font-size: 12px;
+        white-space: nowrap;
+      }
+
+      .file-download-btn {
+        background: #313244;
+        color: #89b4fa;
+        border: none;
+        border-radius: 4px;
+        padding: 4px 8px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+      }
+
+      .file-download-btn:hover {
+        background: #45475a;
+        color: #74c7ec;
       }
 
       .button-group {
@@ -1300,15 +1318,26 @@
 
           const fileName = document.createElement("div");
           fileName.className = "file-name";
+          fileName.title = file.path;
           fileName.textContent = file.path;
 
           const fileSize = document.createElement("div");
           fileSize.className = "file-size";
           fileSize.textContent = formatFileSize(file.length);
 
+          const downloadBtn = document.createElement("button");
+          downloadBtn.className = "file-download-btn";
+          downloadBtn.textContent = "Скачать";
+          downloadBtn.title = "Открыть ссылку на файл в браузере";
+          downloadBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            ipcRenderer.send("download-file", { fileId: file.id, filePath: file.path });
+          });
+
           fileItem.appendChild(checkbox);
           fileItem.appendChild(fileName);
           fileItem.appendChild(fileSize);
+          fileItem.appendChild(downloadBtn);
           fileList.appendChild(fileItem);
 
           if (data.files.length === 1) {

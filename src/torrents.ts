@@ -583,6 +583,22 @@ ipcMain.on('get-external-player-info', (event) => {
   event.reply('external-player-info', getCurrentExternalPlayer());
 });
 
+function shortenPath(path: string, maxLength: number = 60): string {
+  if (path.length <= maxLength) return path;
+  const parts = path.split(/[\/\\]/);
+  if (parts.length <= 2) return '...' + path.slice(-maxLength + 3);
+  
+  const fileName = parts[parts.length - 1];
+  const firstPart = parts[0];
+  const remaining = maxLength - fileName.length - firstPart.length - 6; // 6 for "/.../"
+  
+  if (remaining < 0) {
+    return '...' + path.slice(-maxLength + 3);
+  }
+  
+  return `${firstPart}/.../${fileName}`;
+}
+
 ipcMain.on('choose-player-path', () => {
   const availablePlayers = detectAvailablePlayers();
   const currentPlayer = getCurrentExternalPlayer();
@@ -593,7 +609,7 @@ ipcMain.on('choose-player-path', () => {
     for (const player of availablePlayers) {
       const isCurrentPlayer = player.path === currentPath;
       menuItems.push({
-        label: `${player.name}`,
+        label: `${player.name} - ${shortenPath(player.path)}`,
         sublabel: player.path,
         type: 'checkbox',
         checked: isCurrentPlayer,
@@ -686,6 +702,13 @@ ipcMain.on('copy-magnet', (event, data) => {
     clipboard.writeText(data.magnetUrl);
     logToWizard('Magnet-ссылка скопирована в буфер обмена', 'success');
   }
+});
+
+ipcMain.on('download-file', (event, data) => {
+  const { fileId, filePath } = data;
+  const downloadUrl = encodeURI(`${selectedTorrServerUrl}stream/${filePath}?link=${currentTorrentHash}&index=${fileId}&play`);
+  shell.openExternal(downloadUrl);
+  logToWizard(`Открытие ссылки для скачивания в браузере: ${filePath}`, 'info');
 });
 
 ipcMain.on('magnet-input-result', (event, result) => {
