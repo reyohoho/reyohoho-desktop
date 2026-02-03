@@ -29,6 +29,71 @@ const videoExtensions = [".webm", ".mkv", ".flv", ".vob", ".ogv", ".ogg", ".rrc"
   ".mpg", ".mp2", ".mpeg", ".mpe", ".mpv", ".m4v", ".svi", ".3gp", ".3g2", ".mxf", ".roq", ".nsv",
   ".flv", ".f4v", ".f4p", ".f4a", ".f4b", ".mod", ".m2ts"];
 
+interface PlayerInfo {
+  name: string;
+  path: string;
+  args?: string[];
+}
+
+const knownPlayers: { [platform: string]: PlayerInfo[] } = {
+  linux: [
+    { name: 'VLC', path: '/usr/bin/vlc' },
+    { name: 'VLC (Flatpak)', path: '/var/lib/flatpak/exports/bin/org.videolan.VLC' },
+    { name: 'VLC (Snap)', path: '/snap/bin/vlc' },
+    { name: 'mpv', path: '/usr/bin/mpv' },
+    { name: 'mpv (Flatpak)', path: '/var/lib/flatpak/exports/bin/io.mpv.Mpv' },
+    { name: 'Celluloid', path: '/usr/bin/celluloid' },
+    { name: 'Celluloid (Flatpak)', path: '/var/lib/flatpak/exports/bin/io.github.celluloid_player.Celluloid' },
+    { name: 'SMPlayer', path: '/usr/bin/smplayer' },
+    { name: 'Totem', path: '/usr/bin/totem' },
+    { name: 'Haruna', path: '/usr/bin/haruna' },
+    { name: 'Haruna (Flatpak)', path: '/var/lib/flatpak/exports/bin/org.kde.haruna' },
+    { name: 'GNOME Videos', path: '/usr/bin/gnome-videos' },
+    { name: 'Parole', path: '/usr/bin/parole' },
+    { name: 'Dragon Player', path: '/usr/bin/dragon' },
+  ],
+  darwin: [
+    { name: 'VLC', path: '/Applications/VLC.app/Contents/MacOS/VLC' },
+    { name: 'IINA', path: '/Applications/IINA.app/Contents/MacOS/IINA' },
+    { name: 'mpv', path: '/usr/local/bin/mpv' },
+    { name: 'mpv (Homebrew ARM)', path: '/opt/homebrew/bin/mpv' },
+    { name: 'Elmedia Player', path: '/Applications/Elmedia Player.app/Contents/MacOS/Elmedia Player' },
+    { name: 'Infuse', path: '/Applications/Infuse 7.app/Contents/MacOS/Infuse 7' },
+    { name: 'QuickTime Player', path: '/System/Applications/QuickTime Player.app/Contents/MacOS/QuickTime Player' },
+  ]
+};
+
+function detectAvailablePlayers(): PlayerInfo[] {
+  const platform = process.platform;
+  const players: PlayerInfo[] = [];
+  
+  const platformPlayers = knownPlayers[platform] || [];
+  
+  for (const player of platformPlayers) {
+    if (fs.existsSync(player.path)) {
+      players.push(player);
+    }
+  }
+  
+  const savedPath = store.get('vlc_path', '') as string;
+  if (savedPath && fs.existsSync(savedPath)) {
+    const isAlreadyListed = players.some(p => p.path === savedPath);
+    if (!isAlreadyListed) {
+      players.unshift({ name: 'Сохранённый плеер', path: savedPath });
+    }
+  }
+  
+  return players;
+}
+
+function openWithSystemDefault(url: string): void {
+  if (process.platform === 'linux') {
+    spawn('xdg-open', [url], { detached: true, stdio: 'ignore' }).unref();
+  } else if (process.platform === 'darwin') {
+    spawn('open', [url], { detached: true, stdio: 'ignore' }).unref();
+  }
+}
+
 function createMenu(): Menu {
   const selectedParser = store.get('selected_torrent_parser', 'primary') as string;
 
@@ -446,44 +511,97 @@ ipcMain.on('player-selected', (event, data) => {
 });
 
 ipcMain.on('choose-player-path', () => {
-  let initialPath = '';
-  let hintPath = '';
-  let fileFilters;
-
   if (process.platform === 'win32') {
-    fileFilters = [
+    const fileFilters = [
       { name: 'Executable Files', extensions: ['exe'] },
       { name: 'All Files', extensions: ['*'] }
     ];
-    initialPath = 'C:\\Program Files\\VideoLAN\\VLC\\vlc.exe';
-    hintPath = 'Укажите путь к VLC.exe или к mpc-hc64.exe';
-  } else if (process.platform === 'darwin') {
-    fileFilters = [{ name: 'All Files', extensions: ['*'] }];
-    initialPath = '/Applications/';
-    hintPath = 'Укажите путь к VLC.app';
-  } else {
-    fileFilters = [{ name: 'All Files', extensions: ['*'] }];
-    initialPath = '/usr/bin/';
-    hintPath = 'Укажите путь к бинарнику VLC';
-  }
+    const initialPath = 'C:\\Program Files\\VideoLAN\\VLC\\vlc.exe';
+    const hintPath = 'Укажите путь к VLC.exe или к mpc-hc64.exe';
 
-  dialog.showOpenDialog(wizardWindow!, {
-    title: hintPath,
-    defaultPath: initialPath,
-    filters: fileFilters,
-    properties: ['openFile']
-  }).then(result => {
-    if (!result.canceled && result.filePaths.length > 0) {
-      let selectedPath = result.filePaths[0];
-      if (process.platform === 'darwin') {
-        selectedPath = `${selectedPath}/Contents/MacOS/VLC`;
+    dialog.showOpenDialog(wizardWindow!, {
+      title: hintPath,
+      defaultPath: initialPath,
+      filters: fileFilters,
+      properties: ['openFile']
+    }).then(result => {
+      if (!result.canceled && result.filePaths.length > 0) {
+        const selectedPath = result.filePaths[0];
+        wizardWindow?.webContents.send('player-path-selected', { path: selectedPath });
       }
-
-      wizardWindow?.webContents.send('player-path-selected', { path: selectedPath });
+    }).catch(err => {
+      logToWizard(`Ошибка при выборе файла: ${err}`, 'error');
+    });
+  } else {
+    const availablePlayers = detectAvailablePlayers();
+    
+    const menuItems: Electron.MenuItemConstructorOptions[] = [];
+    
+    menuItems.push({
+      label: '🎬 Открыть в приложении по умолчанию',
+      click: () => {
+        wizardWindow?.webContents.send('player-path-selected', { path: '__SYSTEM_DEFAULT__' });
+      }
+    });
+    
+    menuItems.push({ type: 'separator' });
+    
+    if (availablePlayers.length > 0) {
+      for (const player of availablePlayers) {
+        menuItems.push({
+          label: `${player.name}`,
+          sublabel: player.path,
+          click: () => {
+            wizardWindow?.webContents.send('player-path-selected', { path: player.path });
+          }
+        });
+      }
+      menuItems.push({ type: 'separator' });
     }
-  }).catch(err => {
-    logToWizard(`Ошибка при выборе файла: ${err}`, 'error');
-  });
+    
+    menuItems.push({
+      label: '📂 Указать путь вручную...',
+      click: () => {
+        const fileFilters = [{ name: 'All Files', extensions: ['*'] }];
+        let initialPath = process.platform === 'darwin' ? '/Applications/' : '/usr/bin/';
+        const hintPath = process.platform === 'darwin' 
+          ? 'Укажите путь к приложению' 
+          : 'Укажите путь к бинарнику плеера';
+
+        dialog.showOpenDialog(wizardWindow!, {
+          title: hintPath,
+          defaultPath: initialPath,
+          filters: fileFilters,
+          properties: process.platform === 'darwin' ? ['openFile', 'openDirectory'] : ['openFile']
+        }).then(result => {
+          if (!result.canceled && result.filePaths.length > 0) {
+            let selectedPath = result.filePaths[0];
+            if (process.platform === 'darwin' && selectedPath.endsWith('.app')) {
+              const appName = selectedPath.split('/').pop()?.replace('.app', '') || '';
+              const possiblePaths = [
+                `${selectedPath}/Contents/MacOS/${appName}`,
+                `${selectedPath}/Contents/MacOS/VLC`,
+                `${selectedPath}/Contents/MacOS/IINA`,
+                `${selectedPath}/Contents/MacOS/mpv`,
+              ];
+              for (const p of possiblePaths) {
+                if (fs.existsSync(p)) {
+                  selectedPath = p;
+                  break;
+                }
+              }
+            }
+            wizardWindow?.webContents.send('player-path-selected', { path: selectedPath });
+          }
+        }).catch(err => {
+          logToWizard(`Ошибка при выборе файла: ${err}`, 'error');
+        });
+      }
+    });
+    
+    const menu = Menu.buildFromTemplate(menuItems);
+    menu.popup({ window: wizardWindow! });
+  }
 });
 
 ipcMain.on('save-playlist', (event, data) => {
@@ -712,6 +830,19 @@ function handleMagnetWithWizard(url: string, base64Credentials: string): void {
 }
 
 function launchPlayer(playerPath: string, playUrls: string[]): void {
+  if (playerPath === '__SYSTEM_DEFAULT__') {
+    logToWizard('Открытие в системном приложении по умолчанию', 'info');
+    
+    for (const url of playUrls) {
+      openWithSystemDefault(url);
+    }
+    
+    wizardWindow?.webContents.send('player-launched', { success: true });
+    startStatsUpdate();
+    logToWizard('Начато обновление статистики торрента (каждые 0.5 сек)', 'info');
+    return;
+  }
+
   logToWizard(`Запуск плеера: ${playerPath}`, 'info');
 
   const playerProcess: ChildProcess = spawn(playerPath, playUrls, {
@@ -1002,107 +1133,170 @@ function runPlayer(parameters: string[], magnet: string, hash: string) {
       mainWindow?.setTitle(APP_NAME + ` Плеер запущен успешно`);
     });
   } else {
-    dialog.showMessageBox(mainWindow!, {
-      noLink: true,
-      title: `Выберите действие`,
-      message: ``,
-      buttons: ['Отмена', 'Открыть плеер', 'Сохранить всё как плейлист', 'Скопировать magnet'],
-    }).then((result) => {
-      if (result.response === 0) {
-        mainWindow?.setTitle(APP_NAME);
-        return;
-      } else if (result.response === 1) {
-        playerPath = store.get('vlc_path', '') as string;
-      } else if (result.response === 2) {
-        mainWindow?.setTitle(APP_NAME);
-        shell.openExternal(`${selectedTorrServerUrl}playlist?hash=${hash}`);
-        return;
-      } else if (result.response === 3) {
-        mainWindow?.setTitle(APP_NAME);
-        clipboard.writeText(magnet)
-        return;
+    const availablePlayers = detectAvailablePlayers();
+    
+    const menuItems: Electron.MenuItemConstructorOptions[] = [
+      {
+        label: '🎬 Открыть в приложении по умолчанию',
+        click: () => {
+          mainWindow?.setTitle(APP_NAME + ` Открытие в системном плеере...`);
+          for (const url of parameters) {
+            openWithSystemDefault(url);
+          }
+          mainWindow?.setTitle(APP_NAME + ` Плеер запущен успешно`);
+        }
+      },
+      { type: 'separator' }
+    ];
+    
+    for (const player of availablePlayers) {
+      menuItems.push({
+        label: player.name,
+        sublabel: player.path,
+        click: () => {
+          store.set('vlc_path', player.path);
+          launchExternalPlayer(player.path, parameters);
+        }
+      });
+    }
+    
+    if (availablePlayers.length > 0) {
+      menuItems.push({ type: 'separator' });
+    }
+    
+    menuItems.push(
+      {
+        label: '📂 Указать путь вручную...',
+        click: () => {
+          showManualPlayerDialog(parameters, magnet, hash);
+        }
+      },
+      { type: 'separator' },
+      {
+        label: '💾 Сохранить как плейлист',
+        click: () => {
+          mainWindow?.setTitle(APP_NAME);
+          shell.openExternal(`${selectedTorrServerUrl}playlist?hash=${hash}`);
+        }
+      },
+      {
+        label: '📋 Скопировать magnet',
+        click: () => {
+          mainWindow?.setTitle(APP_NAME);
+          clipboard.writeText(magnet);
+        }
       }
-      const playerProcess: ChildProcess = spawn(playerPath, parameters, {
-        detached: true,
-        stdio: ['ignore', 'ignore', 'pipe']
-      });
-
-      playerProcess.unref();
-
-      playerProcess.stderr?.on('data', (data: Buffer) => {
-        const errorText = data.toString();
-        if (errorText.toLowerCase().includes('error') || errorText.toLowerCase().includes('failed')) {
-          console.error(`player stderr: ${errorText}`);
-          mainWindow?.setTitle(APP_NAME + ` player stderr: ${errorText}`);
-        }
-      });
-
-      playerProcess.on('close', (code: number | null) => {
-        if (code === 0) {
-          console.log('player process exited successfully.');
-        } else {
-          console.error(`player process exited with code ${code}`);
-          mainWindow?.setTitle(APP_NAME + ` player process exited with code: ${code}`);
-        }
-      });
-
-      playerProcess.on('error', (err: Error) => {
-        console.error(`Failed to start player: ${err.message}`);
-        mainWindow?.setTitle(APP_NAME + ` Failed to start player: ${err.message}`);
-      });
-
-      mainWindow?.setTitle(APP_NAME + ` Плеер запущен успешно`);
-    });
+    );
+    
+    const menu = Menu.buildFromTemplate(menuItems);
+    menu.popup({ window: mainWindow! });
   }
 };
 
-function preparePlayer(parameters: string[], magnet: string, hash: string): void {
-  mainWindow?.setTitle(APP_NAME + ` Запускаем плеер...`);
-  let initialPath = store.get('vlc_path', '') as string;
-  if (initialPath.length !== 0 && fs.existsSync(initialPath)) {
-    runPlayer(parameters, magnet, hash);
-    return;
-  }
-  let hintPath = '';
-  let fileFilters;
-  if (process.platform === 'win32') {
-    fileFilters = [
-      { name: 'Executable Files', extensions: ['exe'] },
-      { name: 'All Files', extensions: ['*'] }
-    ]
-    initialPath = 'C:\\Program Files\\VideoLAN\\VLC\\vlc.exe';
-    hintPath = 'Укажите путь к VLC.exe или к mpc-hc64.exe';
-  } else if (process.platform === 'darwin') {
-    fileFilters = [
-      { name: 'All Files', extensions: ['*'] }
-    ]
-    initialPath = '/Applications/';
-    hintPath = 'Укажите путь к VLC.app';
-  } else {
-    fileFilters = [
-      { name: 'All Files', extensions: ['*'] }
-    ]
-    initialPath = '/usr/bin/';
-    hintPath = 'Укажите путь к бинарнику VLC';
-  }
+function launchExternalPlayer(playerPath: string, parameters: string[]): void {
+  const playerProcess: ChildProcess = spawn(playerPath, parameters, {
+    detached: true,
+    stdio: ['ignore', 'ignore', 'pipe']
+  });
+
+  playerProcess.unref();
+
+  playerProcess.stderr?.on('data', (data: Buffer) => {
+    const errorText = data.toString();
+    if (errorText.toLowerCase().includes('error') || errorText.toLowerCase().includes('failed')) {
+      console.error(`player stderr: ${errorText}`);
+      mainWindow?.setTitle(APP_NAME + ` player stderr: ${errorText}`);
+    }
+  });
+
+  playerProcess.on('close', (code: number | null) => {
+    if (code === 0) {
+      console.log('player process exited successfully.');
+    } else {
+      console.error(`player process exited with code ${code}`);
+      mainWindow?.setTitle(APP_NAME + ` player process exited with code: ${code}`);
+    }
+  });
+
+  playerProcess.on('error', (err: Error) => {
+    console.error(`Failed to start player: ${err.message}`);
+    mainWindow?.setTitle(APP_NAME + ` Failed to start player: ${err.message}`);
+  });
+
+  mainWindow?.setTitle(APP_NAME + ` Плеер запущен успешно`);
+}
+
+function showManualPlayerDialog(parameters: string[], magnet: string, hash: string): void {
+  const fileFilters = [{ name: 'All Files', extensions: ['*'] }];
+  let initialPath = process.platform === 'darwin' ? '/Applications/' : '/usr/bin/';
+  const hintPath = process.platform === 'darwin' 
+    ? 'Укажите путь к приложению' 
+    : 'Укажите путь к бинарнику плеера';
 
   dialog.showOpenDialog(mainWindow!, {
     title: hintPath,
     defaultPath: initialPath,
     filters: fileFilters,
-    properties: ['openFile']
+    properties: process.platform === 'darwin' ? ['openFile', 'openDirectory'] : ['openFile']
   }).then(result => {
     if (!result.canceled && result.filePaths.length > 0) {
-      initialPath = result.filePaths[0];
-      if (process.platform === 'darwin') {
-        store.set('vlc_path', `${initialPath}/Contents/MacOS/VLC`);
-      } else {
-        store.set('vlc_path', initialPath);
+      let selectedPath = result.filePaths[0];
+      if (process.platform === 'darwin' && selectedPath.endsWith('.app')) {
+        const appName = selectedPath.split('/').pop()?.replace('.app', '') || '';
+        const possiblePaths = [
+          `${selectedPath}/Contents/MacOS/${appName}`,
+          `${selectedPath}/Contents/MacOS/VLC`,
+          `${selectedPath}/Contents/MacOS/IINA`,
+          `${selectedPath}/Contents/MacOS/mpv`,
+        ];
+        for (const p of possiblePaths) {
+          if (fs.existsSync(p)) {
+            selectedPath = p;
+            break;
+          }
+        }
       }
-      runPlayer(parameters, magnet, hash);
+      store.set('vlc_path', selectedPath);
+      launchExternalPlayer(selectedPath, parameters);
     }
   }).catch(err => {
     console.error('Ошибка при выборе файла:', err);
     mainWindow?.setTitle(APP_NAME + ` Ошибка при выборе файла: ${err}`);
   });
+}
+
+function preparePlayer(parameters: string[], magnet: string, hash: string): void {
+  mainWindow?.setTitle(APP_NAME + ` Запускаем плеер...`);
+  const savedPath = store.get('vlc_path', '') as string;
+  
+  if (savedPath.length !== 0 && fs.existsSync(savedPath)) {
+    runPlayer(parameters, magnet, hash);
+    return;
+  }
+  
+  if (process.platform === 'win32') {
+    const fileFilters = [
+      { name: 'Executable Files', extensions: ['exe'] },
+      { name: 'All Files', extensions: ['*'] }
+    ];
+    const initialPath = 'C:\\Program Files\\VideoLAN\\VLC\\vlc.exe';
+    const hintPath = 'Укажите путь к VLC.exe или к mpc-hc64.exe';
+
+    dialog.showOpenDialog(mainWindow!, {
+      title: hintPath,
+      defaultPath: initialPath,
+      filters: fileFilters,
+      properties: ['openFile']
+    }).then(result => {
+      if (!result.canceled && result.filePaths.length > 0) {
+        store.set('vlc_path', result.filePaths[0]);
+        runPlayer(parameters, magnet, hash);
+      }
+    }).catch(err => {
+      console.error('Ошибка при выборе файла:', err);
+      mainWindow?.setTitle(APP_NAME + ` Ошибка при выборе файла: ${err}`);
+    });
+  } else {
+    runPlayer(parameters, magnet, hash);
+  }
 }
