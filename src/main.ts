@@ -338,10 +338,16 @@ function loadConfig(): void {
       urls: ['*://*/*']
     };
 
+    const chromeUserAgent = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/132.0.0.0 Safari/537.36';
+
     session.defaultSession.webRequest.onBeforeSendHeaders(filter, (details, callback) => {
       try {
         if (details.requestHeaders['Referer'] && details.requestHeaders['Referer'].includes(appConfig!.alloha_referer)) {
           details.requestHeaders['Origin'] = appConfig!.alloha_origin_url;
+        }
+        if (details.url.includes('stream-balancer')) {
+          details.requestHeaders['User-Agent'] = chromeUserAgent;
+          details.requestHeaders['sec-ch-ua'] = '"Google Chrome";v="132", "Chromium";v="132", "Not A(Brand";v="24"';
         }
         callback({ requestHeaders: details.requestHeaders });
       } catch (e) {
