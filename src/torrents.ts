@@ -11,7 +11,7 @@ import { dirname } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const APP_NAME = `ReYohoho Torrents ${app.getVersion()}`;
+const APP_NAME = `Torrents ${app.getVersion()}`;
 
 app.commandLine.appendSwitch('disable-site-isolation-trials');
 let mainWindow: BrowserWindow | null = null;
