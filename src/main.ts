@@ -349,6 +349,16 @@ function loadConfig(): void {
           details.requestHeaders['User-Agent'] = chromeUserAgent;
           details.requestHeaders['sec-ch-ua'] = '"Google Chrome";v="132", "Chromium";v="132", "Not A(Brand";v="24"';
         }
+        const url = new URL(details.url);
+        if ((url.hostname === 'api4.rhserv.vu' || url.hostname === 'api.rhserv.vu') && url.pathname.startsWith('/cache')) {
+          const login = store.get('login', '') as string;
+          const password = store.get('password', '') as string;
+          if (login && password) {
+            const credentials = `${login}:${password}`;
+            const base64Credentials = Buffer.from(credentials).toString('base64');
+            details.requestHeaders['Authorization'] = `Basic ${base64Credentials}`;
+          }
+        }
         callback({ requestHeaders: details.requestHeaders });
       } catch (e) {
         console.error('Error in onBeforeSendHeaders:', e);
