@@ -26,6 +26,42 @@ const isDebug = !app.isPackaged;
 const config_main_path = path.join(__dirname, '../prebuilts/config.json');
 const adblock_path = path.join(__dirname, '../prebuilts/adblock.txt');
 
+const AUTH_API_BASES = ['https://api.rhserv.vu', 'https://api4.rhserv.vu'];
+
+/** Check auth against both API servers; first successful response wins (no wait for the other). */
+async function checkAuthBothServers(login: string, password: string): Promise<boolean> {
+  const credentials = `${login}:${password}`;
+  const base64Credentials = Buffer.from(credentials).toString('base64');
+  const authHeader = `Basic ${base64Credentials}`;
+
+  const checkOne = async (base: string): Promise<boolean> => {
+    const url = `${base}/auth/check`;
+    try {
+      const res = await fetch(url, {
+        method: 'GET',
+        headers: { Authorization: authHeader },
+        signal: AbortSignal.timeout?.(10000) ?? undefined,
+      });
+      console.log('[auth]', url, '->', res.status, res.statusText);
+      return res.status === 200;
+    } catch (err) {
+      console.warn('[auth]', url, 'error:', err);
+      return false;
+    }
+  };
+
+  console.log('[auth] Checking credentials for login:', login, 'against', AUTH_API_BASES.length, 'servers');
+  const p1 = checkOne(AUTH_API_BASES[0]);
+  const p2 = checkOne(AUTH_API_BASES[1]);
+  const firstSuccess = Promise.race([
+    p1.then((ok) => (ok ? true : Promise.reject())),
+    p2.then((ok) => (ok ? true : Promise.reject())),
+  ]);
+  const result = await firstSuccess.catch(() => Promise.all([p1, p2]).then(([a, b]) => a || b));
+  console.log('[auth] Result:', result ? 'OK' : 'FAIL');
+  return result;
+}
+
 autoUpdater.autoInstallOnAppQuit = true;
 if (process.platform === 'darwin') {
   autoUpdater.autoDownload = false;
@@ -365,7 +401,26 @@ function loadConfig(): void {
       }
     });
 
-    createWindow('132');
+    (async () => {
+      const login = store.get('login', '') as string;
+      const password = store.get('password', '') as string;
+
+      if (login && password) {
+        const ok = await checkAuthBothServers(login, password);
+        if (ok) {
+          isNewCredsStored = true;
+          createWindow('132');
+          return;
+        }
+      }
+
+      const result = await createAuthWindow();
+      if (result) {
+        createWindow('132');
+      } else {
+        app.quit();
+      }
+    })();
   } catch (error) {
     console.error('Error load config:', error);
     createWindow(error);
@@ -1025,8 +1080,8 @@ function createAuthWindow(): Promise<{ login: string; password: string } | null>
       maximizable: false,
       minimizable: false,
       alwaysOnTop: false,
-      modal: true,
-      parent: mainWindow!,
+      modal: !!mainWindow,
+      parent: mainWindow ?? undefined,
       show: false,
       frame: false,
       transparent: true,
@@ -1051,7 +1106,13 @@ function createAuthWindow(): Promise<{ login: string; password: string } | null>
       }
     };
 
-    const handleAuthSubmitted = (event: any, data: { login: string; password: string }) => {
+    const handleAuthSubmitted = async (event: any, data: { login: string; password: string }) => {
+      const ok = await checkAuthBothServers(data.login, data.password);
+      if (!ok) {
+        console.warn('[auth] Rejected: both servers returned non-200 for login:', data.login);
+        authWindow?.webContents.send('auth-error', 'Неверный логин или пароль');
+        return;
+      }
       store.set("login", data.login);
       store.set("password", data.password);
       isNewCredsStored = true;
