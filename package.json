@@ -1,8 +1,8 @@
 {
-  "name": "Kinopoisk",
+  "name": "RuTube",
   "version": "1.2.1",
   "main": "dist/main.js",
-  "author": "Kinopoisk",
+  "author": "RuTube",
   "type": "module",
   "devDependencies": {
     "@electron/packager": "^18.3.6",
@@ -33,8 +33,8 @@
       "owner": "reyohoho",
       "repo": "reyohoho-desktop"
     },
-    "productName": "Kinopoisk",
-    "appId": "ru.kinopoisk",
+    "productName": "RuTube",
+    "appId": "ru.rutube",
     "files": [
       "dist/main.js",
       "dist/torrents.js",
@@ -50,7 +50,7 @@
     ],
     "protocols": [
       {
-        "name": "Kinopoisk",
+        "name": "RuTube",
         "schemes": [
           "reyohoho"
         ]
@@ -109,7 +109,7 @@
       ],
       "desktop": {
         "entry": {
-          "Name": "Kinopoisk",
+          "Name": "RuTube",
           "Terminal": "false",
           "Type": "Application",
           "MimeType": "x-scheme-handler/reyohoho"
