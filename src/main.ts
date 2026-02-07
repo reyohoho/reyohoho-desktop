@@ -13,7 +13,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const { autoUpdater } = pkg;
 
-const APP_NAME = `ReYohoho Desktop ${app.getVersion()}`;
+const APP_NAME = `${app.getVersion()}`;
 
 app.commandLine.appendSwitch('disable-site-isolation-trials');
 
@@ -825,10 +825,9 @@ async function createWindow(configError: any | ''): Promise<void> {
                 }
               }
             </style>
-            <div class="menu-logo">ReYohoho</div>
             <div class="menu-items">
               <button class="menu-btn primary" onclick="window.electronAPI.sendHotKey('F1')">
-                <i class="fas fa-film"></i> <span class="btn-text">VIP</span> <span class="hotkey">F1</span>
+                <i class="fas fa-film"></i> <span class="btn-text">Полка</span> <span class="hotkey">F1</span>
               </button>
               <button class="menu-btn" onclick="window.electronAPI.sendHotKey('F9')">
                 <i class="fas fa-key"></i> <span class="btn-text">Аккаунт</span> <span class="hotkey">F9</span>
