@@ -1,8 +1,8 @@
 {
-  "name": "Kinopoisk",
-  "version": "1.2.1",
+  "name": "ReYohoho",
+  "version": "1.2.0",
   "main": "dist/main.js",
-  "author": "Kinopoisk",
+  "author": "ReYohoho",
   "type": "module",
   "devDependencies": {
     "@electron/packager": "^18.3.6",
@@ -33,8 +33,8 @@
       "owner": "reyohoho",
       "repo": "reyohoho-desktop"
     },
-    "productName": "Kinopoisk",
-    "appId": "ru.kinopoisk",
+    "productName": "ReYohoho",
+    "appId": "ru.reyohoho",
     "files": [
       "dist/main.js",
       "dist/torrents.js",
@@ -50,7 +50,7 @@
     ],
     "protocols": [
       {
-        "name": "Kinopoisk",
+        "name": "ReYohoho",
         "schemes": [
           "reyohoho"
         ]
@@ -94,7 +94,6 @@
     "linux": {
       "asar": false,
       "target": "AppImage",
-      "icon": "icons",
       "artifactName": "ReYohoho.Setup.${version}_${arch}.${ext}",
       "category": "AudioVideo",
       "extraFiles": [
@@ -109,7 +108,7 @@
       ],
       "desktop": {
         "entry": {
-          "Name": "Kinopoisk",
+          "Name": "ReYohoho",
           "Terminal": "false",
           "Type": "Application",
           "MimeType": "x-scheme-handler/reyohoho"
