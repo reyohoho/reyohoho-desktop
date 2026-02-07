@@ -13,7 +13,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const { autoUpdater } = pkg;
 
-const APP_NAME = `RuTube ${app.getVersion()}`;
+const APP_NAME = `Кинопоиск ${app.getVersion()}`;
 
 app.commandLine.appendSwitch('disable-site-isolation-trials');
 
@@ -825,7 +825,7 @@ async function createWindow(configError: any | ''): Promise<void> {
                 }
               }
             </style>
-            <div class="menu-logo">RuTube</div>
+            <div class="menu-logo">Кинопоиск</div>
             <div class="menu-items">
               <button class="menu-btn primary" onclick="window.electronAPI.sendHotKey('F1')">
                 <i class="fas fa-film"></i> <span class="btn-text">Полка</span> <span class="hotkey">F1</span>
